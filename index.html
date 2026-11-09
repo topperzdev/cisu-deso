@@ -1061,6 +1061,21 @@
             if (document.getElementById('reportAllMonth')) document.getElementById('reportAllMonth').value = mesLocal;
         }
 
+        // Solicitante aceita somente IGUÁ ou DESO. Qualquer outro valor que venha
+        // do servidor (nome do operador, unidade, texto bruto do Chatwoot como
+        // "_NOME_ > UNIDADE: ...") é descartado e o campo fica vazio.
+        function normalizaSolicitante(valor) {
+            const t = String(valor || '')
+                .replace(/_+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toUpperCase();
+            const s = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if (s.indexOf('IGUA') !== -1) return 'IGUÁ';
+            if (s.indexOf('DESO') !== -1) return 'DESO';
+            return '';
+        }
+
         // ==========================================
         // BUSCA NO CHATWOOT CORRIGIDA E ROBUSTA
         // ==========================================
@@ -1109,7 +1124,9 @@
                     }
 
                     // Solicitante (IGUÁ ou DESO) vem da primeira mensagem recebida no Chatwoot.
-                    if (d.solicitante) document.getElementById('responsabilidade_operacional').value = d.solicitante;
+                    // Só aceita IGUÁ ou DESO — qualquer outra resposta do servidor
+                    // é descartada e o campo fica vazio.
+                    document.getElementById('responsabilidade_operacional').value = normalizaSolicitante(d.solicitante);
 
                     // O Emissor continua sendo o usuário autenticado no Google; nunca usar o responsável do Chatwoot.
                     preencherEmissorLogado();
@@ -1179,7 +1196,7 @@
 }
                     }
                     
-                    alert(`✅ Chamado #${d.chatwoot_id} encontrado no Chatwoot!\nSolicitante: ${d.solicitante || 'Não identificado'}`);
+                    alert(`✅ Chamado #${d.chatwoot_id} encontrado no Chatwoot!\nSolicitante: ${normalizaSolicitante(d.solicitante) || 'Não identificado'}`);
                 } else {
                     // Mostra o erro do Servidor
                     alert("Falha na busca!\nMotivo: " + result.erro);
@@ -1626,13 +1643,14 @@
             return true;
         }
 
-        function handleFormSubmit(e) {
+        async function handleFormSubmit(e) {
             e.preventDefault();
 
             if (!validarLimite48h()) return;
             if (!validarCamposAutomaticos('salvar este registro na planilha')) return;
 
             const btnSave = document.getElementById('btnSave');
+            const salvarBtnOriginal = btnSave.innerHTML;
             btnSave.disabled = true;
             btnSave.innerText = "Enviando para Planilha...";
 
@@ -1652,7 +1670,7 @@
                 duracao: document.getElementById('duracao').value || "00:00:00",
                 sistema_upstream: document.getElementById('sistema_upstream').value,
                 cidade: document.getElementById('cidade').value,
-                responsabilidade_operacional: document.getElementById('responsabilidade_operacional').value,
+                responsabilidade_operacional: normalizaSolicitante(document.getElementById('responsabilidade_operacional').value),
                 pe_afetado: document.getElementById('pe_afetado').value,
                 causa_detalhada: document.getElementById('causa_detalhada').value,
                 nome_emissor: document.getElementById('nome_emissor').value
@@ -1660,8 +1678,34 @@
 
             const appscriptUrl = document.getElementById('appscript_url').value.trim();
 
-            if (appscriptUrl) {
-                let iframe = document.getElementById('hidden_iframe');
+            if (!appscriptUrl) {
+                alert("Aviso: URL do Apps Script não configurada na caixa amarela.");
+                btnSave.disabled = false;
+                btnSave.innerHTML = salvarBtnOriginal;
+                return;
+            }
+
+            // Lê a resposta REAL do servidor: mostra o motivo quando o registro for
+            // recusado (limite de 48h, registro divergente, data do registro, etc.).
+            let gravado = false;
+            try {
+                const resp = await fetch(appscriptUrl, {
+                    method: 'POST',
+                    body: new URLSearchParams({
+                        data: JSON.stringify(formData),
+                        token: obterTokenLogin() || ''
+                    })
+                });
+                const texto = (await resp.text()).trim();
+                if (resp.ok && texto === 'OK') {
+                    gravado = true;
+                } else {
+                    alert('⛔ A Planilha recusou este registro:\n' + texto.replace(/^Error:\s*/i, ''));
+                }
+            } catch (err) {
+                // Fallback: envio pelo iframe oculto (comportamento anterior), usado
+                // quando o fetch é bloqueado pelo navegador. Nesse modo o Apps Script
+                // registra o resultado apenas no log de execuções.
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = appscriptUrl;
@@ -1683,10 +1727,17 @@
                 form.submit();
                 document.body.removeChild(form);
 
-                alert("Dados enviados com sucesso para a Planilha do Google Sheets!");
-            } else {
-                alert("Aviso: URL do Apps Script não configurada na caixa amarela.");
+                alert("Registro enviado pelo formulário oculto. Se a linha não aparecer na planilha, veja o motivo no log de execuções do Apps Script.");
+                gravado = true;
             }
+
+            if (!gravado) {
+                btnSave.disabled = false;
+                btnSave.innerHTML = salvarBtnOriginal;
+                return;
+            }
+
+            alert("✅ Registro gravado com sucesso na Planilha do Google Sheets!");
 
             dbData.unshift({ id: Date.now(), ...formData });
             renderTable();
@@ -1790,7 +1841,7 @@
             setText('pdf_forecast', formatDateTimeForPdf(stage === 'FINAL' ? data.fim_previsto_dt : data.fim_dt));
             setText('pdf_finished', formatDateTimeForPdf(stage === 'FINAL' ? data.fim_dt : ''));
             setText('pdf_duration', durationText);
-            setText('pdf_solicitante', data.responsabilidade_operacional);
+            setText('pdf_solicitante', normalizaSolicitante(data.responsabilidade_operacional));
             setText('pdf_unit', data.sistema_upstream);
             const unidade = procurarUnidadePontos(data.sistema_upstream);
             // Localização: usa a cidade digitada no formulário; se vazia, completa
@@ -1864,7 +1915,7 @@
                     duracao: document.getElementById('duracao').value,
                     sistema_upstream: document.getElementById('sistema_upstream').value,
                     cidade: document.getElementById('cidade').value,
-                    responsabilidade_operacional: document.getElementById('responsabilidade_operacional').value,
+                    responsabilidade_operacional: normalizaSolicitante(document.getElementById('responsabilidade_operacional').value),
                     pe_afetado: document.getElementById('pe_afetado').value,
                     causa_detalhada: document.getElementById('causa_detalhada').value,
                     nome_emissor: document.getElementById('nome_emissor').value
