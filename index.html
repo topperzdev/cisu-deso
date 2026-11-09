@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CISU - Gestão e Emissão CCO DESO</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
@@ -57,6 +58,38 @@
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
 
+    <!-- TELA DE LOGIN (Google, somente @deso-se.com.br) -->
+    <div id="login_overlay" class="no-print fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-auto" style="background: radial-gradient(circle at 20% 15%, #1d4ed8 0%, #1e3a8a 38%, #0b1f4d 100%);">
+        <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 22px 22px;"></div>
+        <div class="relative w-full max-w-md">
+            <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+                <div class="h-2 bg-gradient-to-r from-blue-500 via-sky-400 to-blue-700"></div>
+                <div class="px-8 pt-9 pb-8 text-center">
+                    <div class="mx-auto mb-5 flex items-center justify-center w-24 h-24 rounded-2xl bg-slate-50 border border-slate-200 shadow-inner">
+                        <img id="login_logo" alt="DESO" class="h-14 w-auto">
+                    </div>
+                    <h1 class="text-2xl font-extrabold text-blue-900 tracking-tight">CISU</h1>
+                    <p class="text-sm font-medium text-slate-500 mt-1">Controle de Intermitência UPSTREAM</p>
+
+                    <div class="flex items-center gap-3 my-6">
+                        <div class="flex-1 h-px bg-slate-200"></div>
+                        <span class="text-[11px] font-bold uppercase tracking-widest text-slate-400">Acesso restrito</span>
+                        <div class="flex-1 h-px bg-slate-200"></div>
+                    </div>
+
+                    <p class="text-sm text-slate-600 mb-5">Entre com sua conta Google corporativa<br><span class="font-semibold text-blue-900">@deso-se.com.br</span></p>
+
+                    <div id="google_btn" class="flex justify-center min-h-[44px]"></div>
+
+                    <p id="login_erro" class="hidden mt-5 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3"></p>
+
+                    <p class="mt-7 text-[11px] text-slate-400 leading-relaxed">🔒 Somente colaboradores da DESO.<br>Contas pessoais não têm acesso.</p>
+                </div>
+            </div>
+            <p class="text-center text-xs text-blue-200/80 mt-5">Centro de Controle Operacional • DPRQ • DESO</p>
+        </div>
+    </div>
+
     <header class="bg-blue-900 text-white shadow-lg no-print">
         <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
@@ -72,6 +105,10 @@
                 <button onclick="switchTab('dash-tab')" id="btn-dash-tab" class="px-4 py-2 text-sm font-medium rounded-md text-blue-200 hover:text-white transition">📈 Dashboard Gerencial</button>
                 <button onclick="switchTab('reports-tab')" id="btn-reports-tab" class="px-4 py-2 text-sm font-medium rounded-md text-blue-200 hover:text-white transition">📑 Criação de Relatórios</button>
             </nav>
+            <div id="user_box" class="hidden items-center gap-3 text-xs text-blue-100">
+                <span id="user_nome" class="font-semibold"></span>
+                <button type="button" onclick="sairLogin()" class="bg-blue-950 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md transition">Sair</button>
+            </div>
         </div>
     </header>
 
@@ -886,6 +923,110 @@
             { u: "UD Aningas - P1", m: "Pirambu", ids: ["NOVO (A DEFINIR)"] },
             { u: "Iguá Saneamento", m: "", ids: ["-"] },
         ];
+
+        // ==========================================================
+        // LOGIN GOOGLE (somente @deso-se.com.br)
+        // ==========================================================
+        const GOOGLE_CLIENT_ID = '241593672873-ov3s5rb7nv56ij0kvpvmiu3teb5c46ko.apps.googleusercontent.com';
+        const DOMINIO_PERMITIDO = 'deso-se.com.br';
+        let usuarioLogado = null;
+
+        function decodificarJwt(token) {
+            try {
+                const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                const json = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                return JSON.parse(json);
+            } catch (e) { return null; }
+        }
+
+        function tokenValido(token) {
+            const p = decodificarJwt(token || '');
+            if (!p) return null;
+            const email = String(p.email || '').toLowerCase();
+            if (p.exp * 1000 < Date.now() + 30000) return null;
+            if (p.email_verified !== true) return null;
+            if (p.hd !== DOMINIO_PERMITIDO || !email.endsWith('@' + DOMINIO_PERMITIDO)) return null;
+            return p;
+        }
+
+        function obterTokenLogin() {
+            const t = sessionStorage.getItem('cisu_id_token');
+            return tokenValido(t) ? t : null;
+        }
+
+        function mostrarErroLogin(msg) {
+            const el = document.getElementById('login_erro');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+
+        function preencherEmissorLogado() {
+            const campo = document.getElementById('nome_emissor');
+            if (campo && usuarioLogado && usuarioLogado.name) campo.value = usuarioLogado.name.toUpperCase();
+        }
+
+        function aplicarLogin(token) {
+            const p = tokenValido(token);
+            if (!p) {
+                sessionStorage.removeItem('cisu_id_token');
+                mostrarErroLogin('Use sua conta @' + DOMINIO_PERMITIDO + '. Outras contas não têm acesso.');
+                return false;
+            }
+            sessionStorage.setItem('cisu_id_token', token);
+            usuarioLogado = { name: p.name || p.email, email: p.email };
+            document.getElementById('login_overlay').classList.add('hidden');
+            document.getElementById('login_erro').classList.add('hidden');
+            document.getElementById('user_nome').textContent = usuarioLogado.name;
+            const box = document.getElementById('user_box');
+            box.classList.remove('hidden'); box.classList.add('flex');
+            preencherEmissorLogado();
+            if (typeof carregarPontosEntregaDaPlanilha === 'function') carregarPontosEntregaDaPlanilha();
+            return true;
+        }
+
+        function mostrarTelaLogin() {
+            usuarioLogado = null;
+            document.getElementById('login_overlay').classList.remove('hidden');
+            const box = document.getElementById('user_box');
+            box.classList.add('hidden'); box.classList.remove('flex');
+        }
+
+        function sairLogin() {
+            sessionStorage.removeItem('cisu_id_token');
+            if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect();
+            mostrarTelaLogin();
+        }
+
+        function iniciarLoginGoogle() {
+            const logoHeader = document.querySelector('header img'); const logoLogin = document.getElementById('login_logo');
+            if (logoHeader && logoLogin && !logoLogin.getAttribute('src')) logoLogin.src = logoHeader.src;
+            if (!(window.google && google.accounts && google.accounts.id)) { setTimeout(iniciarLoginGoogle, 200); return; }
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                hd: DOMINIO_PERMITIDO,
+                callback: (resp) => aplicarLogin(resp.credential)
+            });
+            google.accounts.id.renderButton(document.getElementById('google_btn'), { theme: 'outline', size: 'large', shape: 'pill', width: 300, text: 'signin_with', locale: 'pt-BR' });
+            const salvo = obterTokenLogin();
+            if (salvo) aplicarLogin(salvo);
+            else mostrarTelaLogin();
+        }
+
+        // Toda chamada ao Apps Script leva o token do login; sem login válido, volta para a tela de entrada
+        const _fetchOriginal = window.fetch.bind(window);
+        window.fetch = function (input, init) {
+            const url = typeof input === 'string' ? input : (input && input.url) || '';
+            if (url.indexOf('script.google.com/macros') !== -1) {
+                const token = obterTokenLogin();
+                if (!token) { mostrarTelaLogin(); return Promise.reject(new Error('Sessão expirada. Faça login novamente.')); }
+                const sep = url.indexOf('?') === -1 ? '?' : '&';
+                return _fetchOriginal(url + sep + 'token=' + encodeURIComponent(token), init);
+            }
+            return _fetchOriginal(input, init);
+        };
+        // Se a sessão vencer (o login do Google dura 1 hora), pede o login de novo
+        setInterval(() => { if (usuarioLogado && !obterTokenLogin()) mostrarTelaLogin(); }, 30000);
+
         const APPSCRIPT_URL_PADRAO = 'https://script.google.com/macros/s/AKfycbz6rP4CDTwikplVHRqvOw0vtQ9FtzDNO3SHWpvd7Icj5zai4N8Zxv_scu0FqqBUt4nr/exec';
 
         function saveAppScriptUrl() {
@@ -938,10 +1079,7 @@
                     const d = result.dados;
                     const custom = d.custom_attributes;
 
-                    // 1. Preenche o Emissor da Versão 1 com o nome do Operador do Chatwoot
-                    if(d.nome_emissor) {
-                        document.getElementById('nome_emissor').value = d.nome_emissor.toUpperCase();
-                    }
+                    // 1. O Emissor agora vem do login Google (preencherEmissorLogado), não mais do responsável do Chatwoot
 
                     // 2. Se vocês tiverem campos criados lá no Chatwoot com os mesmos IDs, preenche automático:
                     if(custom) {
@@ -1075,6 +1213,7 @@
             const livres = document.getElementById('pontos_livres');
             if (livres) livres.value = '';
             montarBlocoPontosFormulario({ resetar: true });
+            preencherEmissorLogado();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -1456,6 +1595,12 @@
                 input.value = JSON.stringify(formData);
                 form.appendChild(input);
 
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = 'token';
+                tokenInput.value = obterTokenLogin() || '';
+                form.appendChild(tokenInput);
+
                 document.body.appendChild(form);
                 form.submit();
                 document.body.removeChild(form);
@@ -1742,6 +1887,7 @@
             atualizarCamposEtapa();
             loadAppScriptUrl();
             renderTable();
+            iniciarLoginGoogle();
 
             // Bloco de Pontos de Entrega da Unidade (seção 3 da ficha)
             document.getElementById('sistema_upstream').addEventListener('input', () => montarBlocoPontosFormulario({ resetar: true }));
