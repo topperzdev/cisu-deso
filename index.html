@@ -181,23 +181,18 @@
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Ocorrência *</label>
-                                <select id="tipo_ocorrencia" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                <select id="tipo_ocorrencia" onchange="togglePercentualField()" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                                     <option value="">Selecione...</option>
-                                    <option value="Redução">Redução</option>
-                                    <option value="Parada total">Parada total</option>
                                     <option value="Dúvida/Informação">Dúvida/Informação</option>
+                                    <option value="Parada total">Parada total</option>
+                                    <option value="Redução de Vazão">Redução de Vazão</option>
                                 </select>
                             </div>
                             <div class="md:col-span-3">
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Serviço *</label>
-                                <select id="identificacao_ocorrencia" onchange="togglePercentualField()" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                                    <option value="Parada Programada (Manutenção, Obra, etc.)">Parada Programada (Manutenção, Obra, etc.)</option>
-                                    <option value="Parada Não Programada (Falha Operacional, Quebra de Equipamento, etc.)">Parada Não Programada (Falha Operacional, Quebra, etc.)</option>
-                                    <option value="Redução de Vazão/Volume Fornecido">Redução de Vazão/Volume Fornecido</option>
-                                    <option value="Alteração na Qualidade da Água">Alteração na Qualidade da Água</option>
-                                    <option value="A pedido da Concessionária">A pedido da Concessionária</option>
-                                    <option value="Evento de Caso Fortuito ou Força Maior">Evento de Caso Fortuito ou Força Maior</option>
-                                    <option value="Outro">Outro</option>
+                                <select id="identificacao_ocorrencia" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                    <option value="Parada Programada">Parada Programada</option>
+                                    <option value="Parada Não Programada">Parada Não Programada</option>
                                 </select>
                             </div>
 
@@ -1110,28 +1105,21 @@
             ? "Intermitência Programada"
             : "Intermitência Não Programada";
 
-    // Identificação da ocorrência + percentual
+    // Tipo de Serviço (Parada Programada / Não Programada)
     const programada = custom.ocorrencia_programada === "Sim";
-    if (custom.tipo_ocorrencia === "Redução de Vazão") {
-        document.getElementById('identificacao_ocorrencia').value = "Redução de Vazão/Volume Fornecido";
-        togglePercentualField();
-        if (custom.percentual_reducao != null) {
-            document.getElementById('percentual_reducao').value = custom.percentual_reducao + "%";
-        }
-    } else if (custom.tipo_ocorrencia === "Parada") {
-        document.getElementById('identificacao_ocorrencia').value = programada
-            ? "Parada Programada (Manutenção, Obra, etc.)"
-            : "Parada Não Programada (Falha Operacional, Quebra de Equipamento, etc.)";
-        togglePercentualField();
-    }
+    document.getElementById('identificacao_ocorrencia').value = programada ? "Parada Programada" : "Parada Não Programada";
 
-    // Tipo de Ocorrência (Redução / Parada total / Dúvida-Informação) vem do tipo_ocorrencia do Chatwoot
+    // Tipo de Ocorrência (Dúvida/Informação, Parada total, Redução de Vazão) + percentual
     if (custom.tipo_ocorrencia) {
         const tipoOc = String(custom.tipo_ocorrencia).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         const campoTipoOc = document.getElementById('tipo_ocorrencia');
-        if (tipoOc.indexOf('reduc') !== -1) campoTipoOc.value = 'Redução';
+        if (tipoOc.indexOf('reduc') !== -1) campoTipoOc.value = 'Redução de Vazão';
         else if (tipoOc.indexOf('parada') !== -1) campoTipoOc.value = 'Parada total';
         else if (tipoOc.indexOf('duvida') !== -1) campoTipoOc.value = 'Dúvida/Informação';
+        togglePercentualField();
+        if (campoTipoOc.value === 'Redução de Vazão' && custom.percentual_reducao != null) {
+            document.getElementById('percentual_reducao').value = custom.percentual_reducao + "%";
+        }
     }
 
     // Início e fim (a data vem com hora 12:00 fixa, então usa só a data + a hora separada)
@@ -1209,10 +1197,10 @@
         }
 
         function togglePercentualField() {
-            const val = document.getElementById('identificacao_ocorrencia').value;
+            const val = document.getElementById('tipo_ocorrencia').value;
             const div = document.getElementById('div_percentual_reducao');
             const input = document.getElementById('percentual_reducao');
-            if (val === 'Redução de Vazão/Volume Fornecido') {
+            if (val === 'Redução de Vazão') {
                 div.classList.remove('hidden');
                 input.setAttribute('required', 'true');
             } else {
@@ -1309,8 +1297,7 @@
         }
 
         function ocorrenciaEhParada() {
-            const v = document.getElementById('identificacao_ocorrencia').value || '';
-            return v.startsWith('Parada');
+            return document.getElementById('tipo_ocorrencia').value === 'Parada total';
         }
 
         function montarBlocoPontosFormulario(opcoes = {}) {
@@ -1333,7 +1320,7 @@
 
             document.getElementById('form_points_title').textContent = 'Aba de Pontos de Entrega da Unidade [' + (unidade ? unidade.u : (digitado || '—')) + ']:';
             document.getElementById('form_points_mode').textContent = textoModoOcorrencia(
-                document.getElementById('identificacao_ocorrencia').value,
+                document.getElementById('tipo_ocorrencia').value,
                 document.getElementById('percentual_reducao').value
             );
 
@@ -1726,7 +1713,7 @@
             setText('pdf_stage_final', `${stage === 'FINAL' ? '(X)' : '( )'} Fechamento (Final)`);
             setText('pdf_intermitencia', data.tipo_intermitencia);
             setText('pdf_service', data.especificacao);
-            setText('pdf_occurrence', `${data.identificacao_ocorrencia || ''}${data.percentual_reducao ? ` (${data.percentual_reducao})` : ''}`);
+            setText('pdf_occurrence', `${data.tipo_ocorrencia || ''}${data.percentual_reducao ? ` (${data.percentual_reducao})` : ''}${data.identificacao_ocorrencia ? ` - ${data.identificacao_ocorrencia}` : ''}`);
             setText('pdf_start', formatDateTimeForPdf(data.inicio_dt));
             setText('pdf_forecast', formatDateTimeForPdf(stage === 'FINAL' ? data.fim_previsto_dt : data.fim_dt));
             setText('pdf_finished', formatDateTimeForPdf(stage === 'FINAL' ? data.fim_dt : ''));
@@ -1751,7 +1738,7 @@
             const codigosAfetados = new Set(peLinhas.map(l => codigoPontoEntrega(l)).filter(Boolean));
             const unidadeExibicao = unidade ? unidade.u : (String(data.sistema_upstream || '').trim());
             setText('pdf_points_title', `Aba de Pontos de Entrega da Unidade [${unidadeExibicao || '—'}]:`);
-            setText('pdf_points_mode', textoModoOcorrencia(data.identificacao_ocorrencia, data.percentual_reducao));
+            setText('pdf_points_mode', textoModoOcorrencia(data.tipo_ocorrencia, data.percentual_reducao));
 
             const ids = unidade ? unidade.ids.filter(t => !pontoIndefinido(t)) : [];
             const temGrade = ids.length > 0 && peLinhas.some(linha =>
@@ -1911,10 +1898,10 @@
 
             // Bloco de Pontos de Entrega da Unidade (seção 3 da ficha)
             document.getElementById('sistema_upstream').addEventListener('input', () => montarBlocoPontosFormulario({ resetar: true }));
-            document.getElementById('identificacao_ocorrencia').addEventListener('change', () => montarBlocoPontosFormulario({ resetar: true }));
+            document.getElementById('tipo_ocorrencia').addEventListener('change', () => montarBlocoPontosFormulario({ resetar: true }));
             document.getElementById('percentual_reducao').addEventListener('input', () => {
                 document.getElementById('form_points_mode').textContent = textoModoOcorrencia(
-                    document.getElementById('identificacao_ocorrencia').value,
+                    document.getElementById('tipo_ocorrencia').value,
                     document.getElementById('percentual_reducao').value
                 );
             });
