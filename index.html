@@ -152,7 +152,7 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Registro da CISU *</label>
-                                <input type="text" id="registro_cco" required placeholder="Ex: 1138.2026 ou 1138F.2026" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                                <input type="text" id="registro_cco" readonly placeholder="Preenchido automaticamente pelo Chatwoot" class="w-full text-sm p-2 border border-slate-300 rounded outline-none uppercase bg-slate-100">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Registro *</label>
@@ -163,12 +163,8 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Data do Registro *</label>
-                                <input type="date" id="data_emissao" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                                <input type="date" id="data_emissao" readonly class="w-full text-sm p-2 border border-slate-300 rounded outline-none bg-slate-100">
                             </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Título do Chamado</label>
-                            <input type="text" id="titulo_chamado" placeholder="Preenchido automaticamente pela primeira mensagem do Chatwoot" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
                         </div>
                     </div>
 
@@ -244,7 +240,7 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Solicitante</label>
-                                <input type="text" id="responsabilidade_operacional" placeholder="Ex: Manutenção Operacional DESO" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                                <input type="text" id="responsabilidade_operacional" readonly placeholder="IGUÁ ou DESO — preenchido automaticamente pelo Chatwoot" class="w-full text-sm p-2 border border-slate-300 rounded outline-none uppercase bg-slate-100">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Ponto(s) de Entrega Afetado(s) * <span class="text-[10px] text-slate-500 font-medium">(marque no bloco abaixo)</span></label>
@@ -464,7 +460,6 @@
                     <div class="pdf-field"><span class="pdf-label">TIPO DE REGISTRO</span><div class="pdf-stage"><span id="pdf_stage_initial"></span><span id="pdf_stage_final"></span></div></div>
                     <div class="pdf-field"><span class="pdf-label">DATA DO REGISTRO</span><div id="pdf_emission_date" class="pdf-value"></div></div>
                 </div>
-                <div class="pdf-field" style="margin-top:2mm;"><span class="pdf-label">TÍTULO DO CHAMADO</span><div id="pdf_titulo_chamado" class="pdf-value"></div></div>
             </section>
 
             <section class="pdf-section">
@@ -764,6 +759,14 @@
         let dbData = [];
         let chartTipoInstance = null;
         let chartSistemaInstance = null;
+
+        // Registro da CISU trazido do Chatwoot, separado por tipo (INICIAL/FINAL).
+        // Os campos "Registro da CISU" e "Data do Registro" são somente leitura:
+        // nunca podem ser digitados manualmente.
+        let chatwootRegistros = { abertura: '', fechamento: '' };
+        // Data/hora da conclusão do chamado (em ms) capturada na busca do Chatwoot.
+        // Base da regra: não é possível criar CISU após 48h da finalização.
+        let chatwootConclusaoMs = null;
 
         // ==========================================================
         // PONTOS DE ENTREGA DAS UNIDADES — SEÇÃO 3 DA FICHA DE REGISTRO CISU
@@ -1088,9 +1091,25 @@
                     const d = result.dados;
                     const custom = d.custom_attributes || {};
 
-                    // Solicitante e título vêm da primeira mensagem recebida no Chatwoot.
+                    // Campos automáticos da CISU: registro (INICIAL/FINAL) e conclusão do chamado
+                    // (base para a regra que bloqueia a criação após 48h da finalização).
+                    chatwootRegistros = {
+                        abertura: String(custom && custom.cisu_abertura ? custom.cisu_abertura : ''),
+                        fechamento: String(custom && custom.cisu_fechamento ? custom.cisu_fechamento : '')
+                    };
+                    chatwootConclusaoMs = null;
+                    if (custom && custom.data_conclusao) {
+                        const dataC = String(custom.data_conclusao).substring(0, 10);
+                        const horaBruta = custom.hora_conclusao ? String(custom.hora_conclusao) : String(custom.data_conclusao).substring(11, 16);
+                        const horaP = /^(\d{1,2}):(\d{1,2})/.exec(horaBruta || '');
+                        if (dataC && horaP) {
+                            const conclusaoObj = new Date(dataC + 'T' + String(horaP[1]).padStart(2, '0') + ':' + String(horaP[2]).padStart(2, '0'));
+                            if (!isNaN(conclusaoObj.getTime())) chatwootConclusaoMs = conclusaoObj.getTime();
+                        }
+                    }
+
+                    // Solicitante (IGUÁ ou DESO) vem da primeira mensagem recebida no Chatwoot.
                     if (d.solicitante) document.getElementById('responsabilidade_operacional').value = d.solicitante;
-                    if (d.titulo_chamado) document.getElementById('titulo_chamado').value = d.titulo_chamado;
 
                     // O Emissor continua sendo o usuário autenticado no Google; nunca usar o responsável do Chatwoot.
                     preencherEmissorLogado();
@@ -1160,7 +1179,7 @@
 }
                     }
                     
-                    alert(`✅ Chamado #${d.chatwoot_id} encontrado no Chatwoot!\nSolicitante: ${d.solicitante || 'Não identificado'}\nTítulo: ${d.titulo_chamado || 'Não identificado'}`);
+                    alert(`✅ Chamado #${d.chatwoot_id} encontrado no Chatwoot!\nSolicitante: ${d.solicitante || 'Não identificado'}`);
                 } else {
                     // Mostra o erro do Servidor
                     alert("Falha na busca!\nMotivo: " + result.erro);
@@ -1204,6 +1223,9 @@
             document.getElementById('fim_label').textContent = isFinal
                 ? 'Data e Hora Finalização *'
                 : 'Data e Hora Previsão Fin. *';
+            // Registro da CISU é automático: sempre o registro do Chatwoot
+            // conforme o tipo de registro (INICIAL = abertura, FINAL = fechamento).
+            document.getElementById('registro_cco').value = isFinal ? chatwootRegistros.fechamento : chatwootRegistros.abertura;
         }
 
         function togglePercentualField() {
@@ -1222,6 +1244,8 @@
 
         function clearForm() {
             document.getElementById('cisuForm').reset();
+            chatwootRegistros = { abertura: '', fechamento: '' };
+            chatwootConclusaoMs = null;
             document.getElementById('data_emissao').valueAsDate = new Date();
             document.getElementById('duracao').value = "00:00:00";
             atualizarCamposEtapa();
@@ -1567,9 +1591,47 @@
             if (tabId === 'dash-tab') renderDashboard();
         }
 
+        // Validações de criação da CISU: (1) campos automáticos obrigatórios;
+        // (2) limite de 48h após a finalização do chamado.
+        function validarCamposAutomaticos(acao) {
+            const faltando = [];
+            if (!document.getElementById('registro_cco').value.trim()) faltando.push('Registro da CISU');
+            if (!document.getElementById('data_emissao').value) faltando.push('Data do Registro');
+            if (faltando.length) {
+                alert(`⛔ Não é possível ${acao}.\nFalta preencher: ${faltando.join(' e ')}.\nEstes campos são preenchidos automaticamente — busque o chamado no Chatwoot para buscar o registro da CISU.`);
+                return false;
+            }
+            return true;
+        }
+
+        function validarLimite48h() {
+            const LIMITE_MS = 48 * 60 * 60 * 1000;
+
+            // Conclusão do chamado: capturada na busca do Chatwoot; se não houver,
+            // para registro FINAL usa a Data e Hora Finalização informada no chamado.
+            let conclusaoMs = chatwootConclusaoMs;
+            if (!conclusaoMs && document.getElementById('estagio').value === 'FINAL') {
+                const fimVal = document.getElementById('fim_dt').value;
+                if (fimVal) {
+                    const dtFim = new Date(fimVal);
+                    if (!isNaN(dtFim.getTime())) conclusaoMs = dtFim.getTime();
+                }
+            }
+
+            if (conclusaoMs && (Date.now() - conclusaoMs) > LIMITE_MS) {
+                const quando = new Date(conclusaoMs).toLocaleString('pt-BR');
+                alert(`⛔ Não é possível criar este registro de CISU.\nO chamado foi finalizado em ${quando} e já se passaram mais de 48 horas da finalização.`);
+                return false;
+            }
+            return true;
+        }
+
         function handleFormSubmit(e) {
             e.preventDefault();
-            
+
+            if (!validarLimite48h()) return;
+            if (!validarCamposAutomaticos('salvar este registro na planilha')) return;
+
             const btnSave = document.getElementById('btnSave');
             btnSave.disabled = true;
             btnSave.innerText = "Enviando para Planilha...";
@@ -1591,8 +1653,6 @@
                 sistema_upstream: document.getElementById('sistema_upstream').value,
                 cidade: document.getElementById('cidade').value,
                 responsabilidade_operacional: document.getElementById('responsabilidade_operacional').value,
-
-                titulo_chamado: document.getElementById('titulo_chamado').value,
                 pe_afetado: document.getElementById('pe_afetado').value,
                 causa_detalhada: document.getElementById('causa_detalhada').value,
                 nome_emissor: document.getElementById('nome_emissor').value
@@ -1731,7 +1791,6 @@
             setText('pdf_finished', formatDateTimeForPdf(stage === 'FINAL' ? data.fim_dt : ''));
             setText('pdf_duration', durationText);
             setText('pdf_solicitante', data.responsabilidade_operacional);
-            setText('pdf_titulo_chamado', data.titulo_chamado);
             setText('pdf_unit', data.sistema_upstream);
             const unidade = procurarUnidadePontos(data.sistema_upstream);
             // Localização: usa a cidade digitada no formulário; se vazia, completa
@@ -1786,6 +1845,9 @@
             button.textContent = 'Gerando PDF...';
 
             try {
+                if (!validarLimite48h()) return;
+                if (!validarCamposAutomaticos('gerar o PDF da CISU')) return;
+
                 const formData = {
                     chatwoot_id: document.getElementById('chatwoot_id').value,
                     registro_cco: document.getElementById('registro_cco').value || "CISU",
@@ -1803,8 +1865,6 @@
                     sistema_upstream: document.getElementById('sistema_upstream').value,
                     cidade: document.getElementById('cidade').value,
                     responsabilidade_operacional: document.getElementById('responsabilidade_operacional').value,
-
-                    titulo_chamado: document.getElementById('titulo_chamado').value,
                     pe_afetado: document.getElementById('pe_afetado').value,
                     causa_detalhada: document.getElementById('causa_detalhada').value,
                     nome_emissor: document.getElementById('nome_emissor').value
