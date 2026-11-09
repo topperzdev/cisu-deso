@@ -34,13 +34,22 @@
         .pdf-points { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5mm; }
         .pdf-point { display: flex; justify-content: space-between; gap: 2mm; padding: 1.5mm 2mm; border: 1px solid #c8dcfb; border-radius: 1mm; background: #f0f6ff; color: #17438b; font-size: 7pt; }
         .pdf-point-status { color: #a31616; font-size: 6pt; font-weight: bold; }
-        .pdf-rules { padding: 2mm 3mm; border: 1px solid #f2cc75; border-left: 1mm solid #d97706; background: #fffaf0; color: #713f12; font-size: 6.5pt; }
-        .pdf-rules p { margin: 0.5mm 0; }
-        .pdf-signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5mm; margin-top: 4mm; text-align: center; font-size: 6.5pt; }
-        .pdf-signature { border-top: 1px solid #98a8bb; padding-top: 1.5mm; }
-        .pdf-signature strong, .pdf-signature span { display: block; }
-        .pdf-signature span { color: #5c6e85; }
-        .pdf-validation-line { height: 5mm; margin-top: 1mm; border-bottom: 1px solid #98a8bb; }
+        .pdf-point-not-affected { border-color: #cdd8e3; background: #ffffff; color: #5c6e85; }
+        .pdf-point-status-normal { color: #176b36; font-size: 6pt; font-weight: bold; }
+        .pdf-points-headline { display: flex; justify-content: space-between; align-items: baseline; gap: 4mm; margin-bottom: 2mm; font-size: 7.5pt; font-weight: bold; color: #17283d; }
+        .pdf-points-mode { color: #075b9d; font-size: 6.5pt; font-weight: bold; text-align: right; }
+        .pdf-hidden { display: none !important; }
+        .pdf-declaration { margin-top: 3mm; padding: 2mm 3mm; border: 1px solid #c9d5e2; border-radius: 1.5mm; background: #f7f9fb; color: #17283d; font-size: 6.5pt; font-weight: bold; font-style: italic; text-align: justify; }
+        .pdf-sign-block { display: flex; justify-content: space-between; align-items: flex-end; gap: 8mm; margin-top: 5mm; font-size: 6.5pt; }
+        .pdf-sign-operator { flex: 1.3; text-align: center; min-width: 0; }
+        .pdf-sign-line { display: block; border-top: 1px solid #98a8bb; margin-bottom: 1.5mm; }
+        .pdf-sign-operator strong { display: block; margin-bottom: 0.5mm; font-size: 6.5pt; color: #5c6e85; }
+        .pdf-sign-name { display: block; color: #17283d; font-weight: bold; font-size: 7.5pt; }
+        .pdf-contact-ccop { flex: 1; text-align: center; min-width: 0; }
+        .pdf-contact-ccop .pdf-label { text-align: center; }
+        .pdf-closing { margin-top: 5mm; text-align: center; color: #17283d; }
+        .pdf-closing strong { display: block; font-size: 8.5pt; color: #075b9d; line-height: 1.5; }
+        .pdf-closing .pdf-closing-date { display: block; margin-top: 1.5mm; font-size: 7.5pt; font-weight: bold; color: #17283d; }
         .pdf-footer { position: absolute; right: 18mm; bottom: 7mm; left: 18mm; display: flex; justify-content: space-between; padding-top: 3mm; border-top: 1px solid #d5dee8; color: #5c6e85; font-size: 6.5pt; }
         @media print { .pdf-render-host { position: static; } .cisu-pdf-page { page-break-after: always; } }
     </style>
@@ -193,8 +202,8 @@
                                 <input type="text" id="responsabilidade_operacional" placeholder="Ex: Manutenção Operacional DESO" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Ponto(s) de Entrega (PE) Afetado(s) *</label>
-                                <input type="text" id="pe_afetado" required placeholder="Ex: CIDADE DE RIACHUELO" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Ponto(s) de Entrega (PE) Afetado(s) * <span class="text-[10px] text-slate-500 font-medium">(marque no bloco abaixo)</span></label>
+                                <input type="text" id="pe_afetado" readonly required placeholder="Seleção feita no bloco 'Pontos de Entrega da Unidade'" class="w-full text-sm p-2 border border-slate-300 rounded outline-none uppercase bg-slate-100">
                             </div>
                             <div class="md:col-span-3">
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Causa(s) Detalhada(s) da Ocorrência *</label>
@@ -203,30 +212,23 @@
                         </div>
                     </div>
 
-                    <!-- BLOCO D -->
+                    <!-- BLOCO P: PONTOS DE ENTREGA DA UNIDADE (seleção que reproduz a seção 3 da ficha) -->
                     <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
-                        <h3 class="text-sm font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2"><span>🛡️</span> Impacto e Medidas Mitigadoras</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Impacto na Prestação dos Serviços *</label>
-                                <select id="impacto" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                                    <option value="Interrupção Total do Fornecimento de Água Tratada">Interrupção Total do Fornecimento de Água Tratada</option>
-                                    <option value="Redução de Vazão/Volume">Redução de Vazão/Volume</option>
-                                    <option value="Alteração na Qualidade da Água">Alteração na Qualidade da Água</option>
-                                    <option value="Outro Impacto">Outro Impacto</option>
-                                </select>
+                        <h3 class="text-sm font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2"><span>🎯</span> Pontos de Entrega da Unidade (marcar afetados)</h3>
+                        <div class="bg-white p-3 rounded-lg border border-blue-200 space-y-2">
+                            <div class="flex flex-col md:flex-row justify-between gap-1 items-start md:items-center">
+                                <span id="form_points_title" class="text-xs md:text-sm font-bold text-blue-900">Aba de Pontos de Entrega da Unidade:</span>
+                                <span id="form_points_mode" class="text-xs font-bold text-blue-600">Modo: — | Seleção Manual Ativa</span>
                             </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Contato para dúvidas (CCO) *</label>
-                                <input type="text" id="contato_duvidas" required placeholder="Ex: 79 9 9882 0505-COORD. CCO IGUÁ" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                            <div id="form_pontos_grid" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+                            <div id="form_pontos_free_wrap" class="hidden">
+                                <p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-3">Pontos desta unidade ainda não estão definidos no cadastro (planilha "Cadastro Chatwoot - 03/26 - Dados"). Digite manualmente os pontos afetados:</p>
+                                <input type="text" id="pontos_livres" oninput="sincronizarCampoPe()" placeholder="Ex: CO-124 (Saída do RAP-1); CO-126 (Saída do REL)" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase mt-2">
                             </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Medidas Imediatas Tomadas *</label>
-                                <textarea id="medidas_imediatas" rows="2" required placeholder="Ex: RECUPERAR NÍVEL. SOLICITAÇÃO DE RETORNO POR PARTE DA IGUÁ." class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase"></textarea>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Ações Corretivas/Mitigadoras em Curso ou Planejadas *</label>
-                                <textarea id="acoes_corretivas" rows="2" required placeholder="Ex: DISTRIBUIÇÃO SUSPENSA À PEDIDO DA IGUÁ" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase"></textarea>
+                            <div id="form_pontos_actions" class="flex flex-wrap items-center gap-2 pt-1">
+                                <button type="button" onclick="marcarTodosPontos(true)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded text-xs transition">Marcar todos</button>
+                                <button type="button" onclick="marcarTodosPontos(false)" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded text-xs transition">Limpar seleção</button>
+                                <span id="form_pontos_count" class="text-xs text-slate-500"></span>
                             </div>
                         </div>
                     </div>
@@ -234,37 +236,10 @@
                     <!-- BLOCO E -->
                     <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
                         <h3 class="text-sm font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2"><span>👤</span> Emissor / Responsável DESO</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Nome do Representante da DESO *</label>
                                 <input type="text" id="nome_emissor" required placeholder="Ex: THIAGO OLIVEIRA COSTA" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Cargo *</label>
-                                <input type="text" id="cargo_emissor" required placeholder="Ex: ASSISTENTE DE GESTÃO OPERACIONAL II" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Matrícula CCO / DESO</label>
-                                <input type="text" id="matricula_emissor" placeholder="Informe sua matrícula" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- BLOCO F -->
-                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
-                        <h3 class="text-sm font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2"><span>✍️</span> Validação / Supervisão de Turno CCO</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Nome do Validador</label>
-                                <input type="text" id="nome_validador" placeholder="Nome do responsável pela validação" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Cargo do Validador</label>
-                                <input type="text" id="cargo_validador" placeholder="Cargo / função" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Matrícula do Validador</label>
-                                <input type="text" id="matricula_validador" placeholder="Matrícula CCO / DESO" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
                         </div>
                     </div>
@@ -437,7 +412,7 @@
             </header>
 
             <section class="pdf-section">
-                <div class="pdf-section-title"><span>PASSO 1: IDENTIFICAÇÃO E DADOS DE ENTRADA DO OPERADOR</span><span class="pdf-section-note">PREENCHIMENTO INICIAL</span></div>
+                <div class="pdf-section-title"><span>1. IDENTIFICAÇÃO</span></div>
                 <div class="pdf-card pdf-grid pdf-grid-4">
                     <div class="pdf-field"><span class="pdf-label">Nº PROTOCOLO / CHAMADO</span><div id="pdf_protocol" class="pdf-value pdf-value-blue"></div></div>
                     <div class="pdf-field"><span class="pdf-label">REGISTRO DA CISU</span><div id="pdf_registry" class="pdf-value"></div></div>
@@ -447,7 +422,7 @@
             </section>
 
             <section class="pdf-section">
-                <div class="pdf-section-title"><span>PASSO 2: BLOCO 1 - CLASSIFICAÇÃO DA OCORRÊNCIA E TEMPOS</span><span class="pdf-section-note">CLASSIFICAÇÃO DO REGISTRO</span></div>
+                <div class="pdf-section-title"><span>2. DETALHAMENTO DA OCORRÊNCIA</span></div>
                 <div class="pdf-card">
                     <div class="pdf-grid pdf-grid-3">
                         <div class="pdf-field"><span class="pdf-label">INTERMITÊNCIA</span><div id="pdf_intermitencia" class="pdf-value"></div></div>
@@ -460,49 +435,48 @@
                         <div class="pdf-field"><span class="pdf-label">DATA E HORA FINALIZAÇÃO</span><div id="pdf_finished" class="pdf-value"></div></div>
                         <div class="pdf-field"><span class="pdf-label">DURAÇÃO (CÁLCULO AUTO)</span><div id="pdf_duration" class="pdf-value pdf-value-green"></div></div>
                     </div>
+                    <div class="pdf-grid pdf-grid-3" style="margin-top: 2mm;">
+                        <div class="pdf-field"><span class="pdf-label">SOLICITANTE</span><div id="pdf_solicitante" class="pdf-value"></div></div>
+                        <div class="pdf-field"><span class="pdf-label">UNIDADE OPERACIONAL</span><div id="pdf_unit" class="pdf-value"></div></div>
+                        <div class="pdf-field"><span class="pdf-label">LOCALIZAÇÃO DA UNIDADE</span><div id="pdf_location" class="pdf-value"></div></div>
+                    </div>
                 </div>
             </section>
 
             <section class="pdf-section">
-                <div class="pdf-section-title"><span>PASSO 3: BLOCO 2 - LOCALIZAÇÃO E RESPONSABILIDADE OPERACIONAL</span></div>
-                <div class="pdf-card pdf-grid pdf-grid-3">
-                    <div class="pdf-field"><span class="pdf-label">UNIDADE OPERACIONAL</span><div id="pdf_unit" class="pdf-value"></div></div>
-                    <div class="pdf-field"><span class="pdf-label">LOCALIZAÇÃO DA UNIDADE</span><div id="pdf_location" class="pdf-value"></div></div>
-                    <div class="pdf-field"><span class="pdf-label">RESPONSABILIDADE</span><div id="pdf_responsibility" class="pdf-value"></div></div>
-                </div>
-            </section>
-
-            <section class="pdf-section">
-                <div class="pdf-section-title"><span>PASSO 4: PONTOS DE ENTREGA DA UNIDADE OPERACIONAL AFETADA</span></div>
+                <div class="pdf-section-title"><span>3. PONTOS DA CONCESSIONÁRIA AFETADOS</span></div>
                 <div class="pdf-card">
-                    <div style="display:flex;justify-content:space-between;gap:4mm;margin-bottom:2mm;font-size:7pt;font-weight:bold;color:#46566b;">
-                        <span>Pontos informados no registro</span><span id="pdf_impact" style="color:#075b9d;"></span>
+                    <div class="pdf-points-headline">
+                        <span id="pdf_points_title">Aba de Pontos de Entrega da Unidade</span>
+                        <span class="pdf-points-mode" id="pdf_points_mode">Modo: — | Seleção Manual Ativa</span>
                     </div>
                     <div id="pdf_points" class="pdf-points"></div>
+                    <div id="pdf_points_free_field" class="pdf-field pdf-hidden" style="margin-top:2mm;">
+                        <span class="pdf-label">PONTO(S) DE ENTREGA AFETADO(S)</span>
+                        <div id="pdf_points_free" class="pdf-value" style="min-height:10mm;"></div>
+                    </div>
                     <div class="pdf-field" style="margin-top:2mm;"><span class="pdf-label">ESPECIFICAÇÃO / CAUSA DETALHADA</span><div id="pdf_cause" class="pdf-value"></div></div>
                 </div>
             </section>
 
-            <section class="pdf-section">
-                <div class="pdf-section-title"><span>PASSO 5: IMPACTOS E AÇÕES ADOTADAS</span></div>
-                <div class="pdf-card pdf-grid pdf-grid-3">
-                    <div class="pdf-field"><span class="pdf-label">MEDIDAS IMEDIATAS</span><div id="pdf_measures" class="pdf-value"></div></div>
-                    <div class="pdf-field"><span class="pdf-label">AÇÕES CORRETIVAS / MITIGADORAS</span><div id="pdf_actions" class="pdf-value"></div></div>
-                    <div class="pdf-field"><span class="pdf-label">CONTATO PARA DÚVIDAS</span><div id="pdf_contact" class="pdf-value"></div></div>
-                </div>
-            </section>
+            <p class="pdf-declaration">Declaramos que as informações contidas neste formulário são precisas e completas, conforme nosso melhor conhecimento e as condições atuais observadas. Esta comunicação é realizada em cumprimento às obrigações contratuais (Contrato de Produção de Água, Contrato de Interdependência) e regulatórias aplicáveis.</p>
 
-            <div class="pdf-rules">
-                <strong>INFORMAÇÕES DESTE REGISTRO</strong>
-                <p id="pdf_rule_duration"></p>
-                <p id="pdf_rule_location"></p>
-                <p id="pdf_rule_points"></p>
+            <div class="pdf-sign-block">
+                <div class="pdf-sign-operator">
+                    <span class="pdf-sign-line"></span>
+                    <strong>Operador Responsável pelo Preenchimento</strong>
+                    <span class="pdf-sign-name" id="pdf_operator"></span>
+                </div>
+                <div class="pdf-contact-ccop">
+                    <span class="pdf-label">Contato do CCOP para dúvidas</span>
+                    <div class="pdf-value" style="text-align:center; font-size:8pt;">+55 79 8108-4191</div>
+                </div>
             </div>
 
-            <div class="pdf-signatures">
-                <div class="pdf-signature"><strong>Operador Responsável pelo Preenchimento</strong><span id="pdf_operator"></span><span id="pdf_role"></span><span>Matrícula CCO / DESO: <strong id="pdf_matricula"></strong></span></div>
-                <div class="pdf-signature"><strong>Supervisão de Turno CCO</strong><span id="pdf_validator"></span><span id="pdf_validator_role"></span><span>Matrícula: <strong id="pdf_validator_registration"></strong></span><span class="pdf-validation-line"></span><span>Assinatura de validação</span></div>
-                <div class="pdf-signature"><strong>Data e Hora de Geração do PDF</strong><span id="pdf_sent_at"></span></div>
+            <div class="pdf-closing">
+                <strong>Centro de Controle Operacional</strong>
+                <strong>Diretoria de Produção e Qualidade - DPRQ</strong>
+                <span class="pdf-closing-date">Aracaju, <span id="pdf_sent_at"></span></span>
             </div>
 
             <footer class="pdf-footer"><span>Companhia de Saneamento de Sergipe - DESO &bull; CCO / Sistema de Registros CISU</span><span>Documento Operacional de Atendimento</span></footer>
@@ -745,7 +719,173 @@
         let chartTipoInstance = null;
         let chartSistemaInstance = null;
 
-        // URL do Apps Script (implantação atual). Para trocar, edite só esta linha.
+        // ==========================================================
+        // PONTOS DE ENTREGA DAS UNIDADES — SEÇÃO 3 DA FICHA DE REGISTRO CISU
+        // FONTE: planilha "Cadastro Chatwoot - 03/26 - Dados" (Planilha de Wendell).
+        // Campo "m" = Município/Localidade da unidade: auto-preenche "Cidade /
+        // Localidade" no formulário e na ficha em PDF quando a unidade é informada.
+        // Para ATUALIZAR: (1) edite a lista abaixo no formato
+        // { u: "Nome da Unidade", m: "Município/Localidade", ids: ["ID1 (...)", "ID2 (...)"] }, ou
+        // (2) crie a aba "PontosEntrega" na planilha central (colunas: A =
+        // Unidade; B = Município/Localidade; C em diante = "Lista dos Id's") e configure no
+        // Apps Script a ação ?acao=pontos_entrega (ver carregarPontosEntregaDaPlanilha()).
+        // Casos pendentes na régua (pontos não definidos ficam em modo livre):
+        // ETA Curralinho 1 e 2 ("????????????"), Iguá Saneamento ("-") e UDs
+        // Ilha do Ouro / Quirino / Aningas P1 ("NOVO (A DEFINIR)").
+        // ==========================================================
+        let PONTOS_ENTREGA_BASE = [
+            { u: "ETA Abaís", m: "Estância", ids: ["M-161 (Saída do REL)"] },
+            { u: "ETA Água Branca", m: "Cristinápolis", ids: ["S-160 (Saída do REL)"] },
+            { u: "ETA Alto Sertão (EE1)", m: "Porto da Folha", ids: ["N-078 (Saída do RAP da EEA1)", "N-079 (Saída da EEA1)"] },
+            { u: "ETA Alto Sto Antônio", m: "Neópolis", ids: ["N-058 (Saída do REL)"] },
+            { u: "ETA Arauá", m: "Arauá", ids: ["S-152 (Saída REL)", "S-153 (Saída EEAT)"] },
+            { u: "ETA Areia Branca", m: "Areia Branca", ids: ["CO-099 (Saída EEAT)"] },
+            { u: "ETA Ass. Cajueiro", m: "Poço Redondo", ids: ["N-098 (Saída da EEA1)"] },
+            { u: "ETA Bonsucesso", m: "Poço Redondo", ids: ["N-088 (Saída do REL)"] },
+            { u: "ETA Boquim", m: "Boquim", ids: ["S-183 (Saída da REL-1)"] },
+            { u: "ETA Borda Mata - Canhoba", m: "Canhoba", ids: ["N-094 (Saída do REL)"] },
+            { u: "ETA Brandão/Escurial", m: "Gararu", ids: ["NOVO (Saída do RAP)"] },
+            { u: "ETA Brejão dos Negros", m: "Brejo Grande", ids: ["N-039 (Saída do REL)"] },
+            { u: "ETA Brejo Grande", m: "Brejo Grande", ids: ["N-022 (Saída do REL)"] },
+            { u: "ETA Cabrita", m: "São Cristovão", ids: ["M-008 (Saída do RAP)"] },
+            { u: "ETA Cajaíba", m: "Itabaiana", ids: ["CO-103 (Saída da EEAT – Itabaiana)", "CO-104 (Saída da EEAT– Campo do Brito/Macambira/São Domingos)", "CO-105 (Saída da REL– Povoado Mangabeiras)"] },
+            { u: "ETA Cajueiro", m: "Poço Redondo", ids: ["N-093 (Saída do REL)"] },
+            { u: "ETA Canindé SF", m: "Canindé de São Francisco", ids: ["N-081 (Saída da EEAT - Povoados)", "N-082 (Saída do REL - Sede da Cidade)"] },
+            { u: "ETA Caueira", m: "Itaporanga D'Ajuda", ids: ["M-165 (Saída do REL)"] },
+            { u: "ETA Crasto", m: "Santa Luzia", ids: ["S-178 (Saída do RAP)"] },
+            { u: "ETA Cristinápolis", m: "Cristinápolis", ids: ["S-154 (Saída do REL)"] },
+            { u: "ETA Gararu", m: "Gararu", ids: ["N-083 (Saída EEAT - Povoado Oiteiros)", "N-084 (Saída EEAT)"] },
+            { u: "ETA Genipatuba/Cabaceiro", m: "Gararu", ids: ["N-091 (Saída do REL)"] },
+            { u: "ETA Ibura 1", m: "Nossa Senhora do Socorro", ids: ["M-010 (Saída da EEAT)"] },
+            { u: "ETA Ibura 2", m: "Nossa Senhora do Socorro", ids: ["M-011 (Saída da EEAT)"] },
+            { u: "ETA Ilha das Flores", m: "Ilha das Flores", ids: ["N-023 (Saída do REL)"] },
+            { u: "ETA Itaporanga", m: "Itaporanga D'Ajuda", ids: ["M-134 (Saída do RAP)", "M-135 (Saída do REL)"] },
+            { u: "ETA Jabiberi", m: "Tobias Barreto", ids: ["S-145 (Saída do REL)"] },
+            { u: "ETA Jacaré-Curituba", m: "Canindé de São Francisco", ids: ["N-086 (Saída REL)", "N-087 (Saída EEA2)"] },
+            { u: "ETA Japoatã", m: "Japoatã", ids: ["N-028 Saída do REL-1)"] },
+            { u: "ETA Jatobá", m: "Barra dos Coqueiros", ids: ["M-016 (Saída do REL)"] },
+            { u: "ETA João Ednaldo R0", m: "Nossa Senhora do Socorro", ids: ["M-001 (Saída do RAP - R0-Bugio e Itacanema)", "M-002 (Saída do RAP - R0- EE3)", "M-003 (Saída da EEAT - R0-R2)", "M-004 (Saída da EEAT - R0-R8)"] },
+            { u: "ETA Lagoa Primeira", m: "Gararu", ids: ["N-092 (Saída do REL)"] },
+            { u: "ETA Lagoa Redonda", m: "Pirambu", ids: ["M-064 (Saída do REL)"] },
+            { u: "ETA Malhada dos Bois", m: "Malhada dos Bois", ids: ["N-030 (Saída do REL)"] },
+            { u: "ETA Malhador", m: "Malhador", ids: ["CO-129 (Saída da EEAT-1)"] },
+            { u: "ETA N. S. Dores", m: "Nossa Senhora das Dores", ids: ["CO-018 (Saída do REL-1)"] },
+            { u: "ETA Neópolis", m: "Neópolis", ids: ["N-026 (Saída do REL)", "N-027 (Saída do RAP)"] },
+            { u: "ETA Niterói/Mucambo", m: "Porto da Folha", ids: ["N-096 (Saída da EEAT-2)", "N-097 (Saída REL)"] },
+            { u: "ETA O. Teixeira/Siri", m: "Nossa Senhora do Socorro", ids: ["M-012 (Saída dos RAP's)", "M-013 (Saída do RAP - Taiçoca 1)", "M-014 (Saída da EEAT - Taiçoca 2)"] },
+            { u: "ETA Pedrinhas", m: "Pedrinhas", ids: ["CO-100 (Saída do REL)"] },
+            { u: "ETA Piauit. I", m: "Salgado", ids: ["S-140 (Saída da EAT-01 junto à ETA-01)"] },
+            { u: "ETA Piauit. II", m: "Salgado", ids: ["S-141 (Saída da EAT-15 junto à ETA-03)"] },
+            { u: "ETA Pindoba", m: "Neópolis", ids: ["N-059 (Saída do RAP)"] },
+            { u: "ETA Pirambu", m: "Pirambu", ids: ["M-019 (Saída do REL)"] },
+            { u: "ETA Poxim", m: "Aracaju", ids: ["N-052 (Saída do Poço 1)"] },
+            { u: "ETA Propriá", m: "Propriá", ids: ["N-031 (Saída da EEAT - DIP)", "N-032 (Saída do REL - Cedro)", "N-033 (Saída do REL - Telha)", "N-034 (Saída do REL - Parte Alta)", "N-035 (Saída do REL - Povoado São Pedro)", "N-037 (Saída do RAP - Conjunto Viva)"] },
+            { u: "ETA Riachuelo", m: "Riachuelo", ids: ["CO-124 (Saída do RAP-1)", "CO-126 (Saída do REL)"] },
+            { u: "ETA Ribeira", m: "Itabaiana", ids: ["CO-101 (Saída do RAP)"] },
+            { u: "ETA Saco", m: "Estância", ids: ["M-162 (Saída do REL)"] },
+            { u: "ETA Santa Cruz", m: "Propriá", ids: ["N-066 (Saída do RAP - Povoado Santa Cruz)", "N-067 (Saída REL - Povoados Boa Esperança, Pau da Marreca e Alemanha)", "N-069 (Saída EEA - Povoado São Miguel)", "N-070 (Saída EEAT - Povoados Mussuípe e Soldeiro)"] },
+            { u: "ETA Sapé", m: "Itaporanga D'Ajuda", ids: ["M-137 (Saída do REL)"] },
+            { u: "ETA Saramem", m: "Brejo Grande", ids: ["N-038 (Saída do REL)"] },
+            { u: "ETA Saúde", m: "Santana do São Francisco", ids: ["N-071 (Saída do REL)"] },
+            { u: "ETA Semiárido EE1A", m: "Porto da Folha", ids: ["N-080 (Saída da EEAT1-A)"] },
+            { u: "ETA Serrão/Jenipapo", m: "Ilha das Flores", ids: ["N-041 (Saída do REL)"] },
+            { u: "ETA Sertaneja A200", m: "Amparo do São Francisco", ids: ["N-076 (Saída da EEAT)", "N-077 (Saída do RAP)"] },
+            { u: "ETA Siriri", m: "Siriri", ids: ["CO-017 (Saída da EEAT-1)"] },
+            { u: "ETA Sto Amaro Brotas", m: "Santo Amaro das Brotas", ids: ["M-120 (Saída do REL-1)"] },
+            { u: "ETA Tobias Barreto", m: "Tobias Barreto", ids: ["S-143 (Saída da RAP - Conj. Roma)", "S-144 (Saída da RAP - Conj. Agripino)", "S-146 (Saída do REL-1 - Sede da Cidade)"] },
+            { u: "ETA Umbaúba", m: "Umbaúba", ids: ["S-147 (Saída do REL-1 - Umbaúba)", "S-148 (Saída da EEAT-1 - Itabaianinha e Tomar do Gerú)"] },
+            { u: "ETA Curralinho 1 (Velha)", m: "Poço Redondo", ids: [] },
+            { u: "ETA Curralinho 2 (Nova)", m: "Poço Redondo", ids: [] },
+            { u: "UD Ilha do Ouro", m: "Porto da Folha", ids: ["NOVO (A DEFINIR)"] },
+            { u: "UD Adique", m: "Malhador", ids: ["NOVO (Saída do poço 1+2)"] },
+            { u: "UD Água Vermelha", m: "Neópolis", ids: ["NOVO (Saída do poço 1)"] },
+            { u: "UD Aguilhadas", m: "Pirambu", ids: ["NOVO (Saída do REL)"] },
+            { u: "UD Alagamar", m: "Pirambu", ids: ["M-063 (Saída do Poço)"] },
+            { u: "UD Alecrim", m: "Malhador", ids: ["NOVO (Saída do poço 1A)"] },
+            { u: "UD Amargosa", m: "Poço Verde", ids: ["S-177 (Saída do REL-1)"] },
+            { u: "UD Badajós", m: "Japaratuba", ids: ["M-042 (Saída do Poço 1)"] },
+            { u: "UD Balneário - Rosário", m: "Rosário do Catete", ids: ["CO-191 (Saída do Poço 1)"] },
+            { u: "UD Borda Mata - Dores", m: "Nossa Senhora das Dores", ids: ["NOVO (Saída do Poço 3)"] },
+            { u: "UD Brasília - P1", m: "Lagarto", ids: ["S-170 (Saída do Poço 1)"] },
+            { u: "UD Brasília - P2A", m: "Lagarto", ids: ["S-189 (Saída do Poço 2A"] },
+            { u: "UD Brasília - P3", m: "Lagarto", ids: ["S-190 (Saída do Poço 3)"] },
+            { u: "UD C. Grande P1", m: "Nossa Senhora das Dores", ids: ["CO-060 (Saída do Poço 1)"] },
+            { u: "UD C. Grande P2", m: "Nossa Senhora das Dores", ids: ["N-186 (Saída do Poço 2)"] },
+            { u: "UD Cágados", m: "Aquidabã", ids: ["NOVO (Saída da Caixa de Passagem)"] },
+            { u: "UD Camará", m: "Japaratuba", ids: ["N-043 (Saída do poço 1)"] },
+            { u: "UD Candeias", m: "Moita Bonita", ids: ["CO-130 (Saída do REL)"] },
+            { u: "UD Casa Caiada", m: "Arauá", ids: ["S-157 (Saída do REL)"] },
+            { u: "UD Cipó", m: "Rosário do Catete", ids: ["NOVO (Saída do Poço 1)"] },
+            { u: "UD Convento", m: "Indiaroba", ids: ["S-163 (Saída do Poço 1)"] },
+            { u: "UD Curralinho", m: "Aquidabã", ids: ["NOVO (Saída do Poço 1+1A)"] },
+            { u: "UD Divina Pastora", m: "Divina Pastora", ids: ["CO-128 (Saída da EEAT da Caixa de Reunião)"] },
+            { u: "UD Dom Helder", m: "Itaporanga D'Ajuda", ids: ["M-168 (Saída do Poço 1)"] },
+            { u: "UD Espinheiro", m: "Japoatã", ids: ["N-050 (Saída do Poço 1)"] },
+            { u: "UD Est. do Rapouso", m: "Pacatuba", ids: ["N-061 M-168 (Saída do Poço 1)"] },
+            { u: "UD Estancinha", m: "Lagarto", ids: ["S-169 (Saída do REL)"] },
+            { u: "UD Fonte Padres", m: "Divina Pastora", ids: ["CO-127 (Saída da EEAT)"] },
+            { u: "UD Forges", m: "Japaratuba", ids: ["M-044 (Saída do Poço)"] },
+            { u: "UD General Maynard", m: "General Maynard", ids: ["M-045 (Saída do Poço)"] },
+            { u: "UD Ginásio/Lagoa Carão", m: "Santa Rosa de Lima", ids: ["NOVO (Saída da Caixa de Reunião)"] },
+            { u: "UD Indiaroba", m: "Indiaroba", ids: ["S-155 (Saída da Caixa de Reunião)"] },
+            { u: "UD Japaratuba Prata", m: "Japaratuba", ids: ["M-047 (Saída para Povoados)", "M-049 (Saída para Sede da Cidade)"] },
+            { u: "UD Jenipapo", m: "Lagarto", ids: ["S-173 (Saída do REL)"] },
+            { u: "UD Ladeirinhas - P1", m: "Japoatã", ids: ["N-051 (Saída do Poço 1)"] },
+            { u: "UD Ladeirinhas - P2", m: "Japoatã", ids: ["N-185 (Saída do Poço 2)"] },
+            { u: "UD Lagoa Tamborins", m: "São Miguel do Aleixo", ids: ["NOVO (Saída do Poço)"] },
+            { u: "UD Laranjeiras", m: "Laranjeiras", ids: ["CO-114 (Saída do RAP-1)"] },
+            { u: "UD Luiza Mahin", m: "Itaporanga D'Ajuda", ids: ["M-166 (Saída do Poço 1)"] },
+            { u: "UD Mariquita- P1", m: "Lagarto", ids: ["S-172 (Saída do Poço 1)"] },
+            { u: "UD Mariquita- P2", m: "Lagarto", ids: ["S-188 (Saída do Poço 2)"] },
+            { u: "UD Maruim", m: "Maruim", ids: ["CO-121 (Saída da EEAT - João XXIII)", "CO-122 (Saída da EEAT - Lachez)", "CO-123 (Saída da EEAT - Maísa)"] },
+            { u: "UD Mata do Cipó", m: "Siriri", ids: ["NOVO (Saída do Poço 1)"] },
+            { u: "UD Moita Bonita", m: "Moita Bonita", ids: ["CO-113 (Saída da EEAT)"] },
+            { u: "UD Mulungu", m: "São Domingos", ids: ["NOVO (Saída do Poço 1)"] },
+            { u: "UD Mundo Novo", m: "Japaratuba", ids: ["M-045 (Saída do Poço)"] },
+            { u: "UD Muribeca", m: "Muribeca", ids: ["N-055 (Saída EEAT - Parte Alta)", "N-056 (Saída do REL-1)"] },
+            { u: "UD Oiteiros", m: "Nossa Senhora do Socorro", ids: ["M-015 (Saída do REL)"] },
+            { u: "UD P. Mangues", m: "Pacatuba", ids: ["N-062 (Saída do Poço 3)"] },
+            { u: "UD Pacatuba", m: "Pacatuba", ids: ["N-020 (Saída do RAP-1)", "N-021 (Saída EEAT)"] },
+            { u: "UD Pastor", m: "Boquim", ids: ["S-159 (Saída da REL)"] },
+            { u: "UD Pastora", m: "Laranjeiras", ids: ["CO-116 (Saída do REL)"] },
+            { u: "UD Pe Josimo/Darcy Ribeiro", m: "Itaporanga D'Ajuda", ids: ["M-167 (Saída do Poço 1)"] },
+            { u: "UD Pedrinhas - A. Branca", m: "Areia Branca", ids: ["CO-100 (Saída do REL)"] },
+            { u: "UD Poço dos Bois", m: "Cedro de São João", ids: ["N-040 (Saída dos Poços 1 e 2)"] },
+            { u: "UD Poço Verde", m: "Poço Verde", ids: ["S-174 (Saída do REL)"] },
+            { u: "UD Poços", m: "Arauá", ids: ["S-156 (Saída do REL)"] },
+            { u: "UD Pontal", m: "Indiaroba", ids: ["S-187 (Saída RAP)"] },
+            { u: "UD Poxim", m: "Japoatã", ids: ["N-052 (Saída do Poço 2)"] },
+            { u: "UD Quirino", m: "Lagarto", ids: ["NOVO (A DEFINIR)"] },
+            { u: "UD Rainha Anjos", m: "Poço Verde", ids: ["S-182 (Saída do Poço 1)"] },
+            { u: "UD Ribeirópolis", m: "Ribeirópolis", ids: ["NOVO (Saída do Poço 18)"] },
+            { u: "UD Ribeirópolis P12", m: "Ribeirópolis", ids: ["CO-107 (Saída do Poço 12)"] },
+            { u: "UD Ribeirópolis P14", m: "Ribeirópolis", ids: ["CO-108 (Saída do Poço 14 - Escola)"] },
+            { u: "UD Rio Real", m: "Poço Verde", ids: ["S-176 (Saída do Poço)"] },
+            { u: "UD Rosário", m: "Rosário do Catete", ids: ["CO-118 (Saída do RAP-1)", "CO-118 (Saída do REL-1)"] },
+            { u: "UD S. Machado - P18", m: "Ribeirópolis", ids: ["CO-110 (Saída do Poço 18)"] },
+            { u: "UD MB4", m: "Moita Bonita", ids: ["CO-112 (Saída do Poço 4)"] },
+            { u: "UD S. Machado - P9", m: "Ribeirópolis", ids: ["CO-109 (Saída do Poço 9)"] },
+            { u: "UD Salgado", m: "Salgado", ids: ["S-138 (Saída da EEAT-1)"] },
+            { u: "UD Santa Luzia", m: "Santa Luzia do Intanhy", ids: ["S-179 (Saída do REL-1)"] },
+            { u: "UD Santana SF", m: "Santana do São Francisco", ids: ["N-072 (Saída do Poço 1)", "N-073 (Saída dos Poços 4+5+6)"] },
+            { u: "UD São Francisco", m: "São Francisco", ids: ["N-075 (Saída do REL-1)"] },
+            { u: "UD Sibaldi", m: "Japaratuba", ids: ["M-046 (Saída do Poço)"] },
+            { u: "UD Sta Rosa Lima", m: "Santa Rosa de Lima", ids: ["CO-131 (Saída da EEAT ou da Caixa de Reunião)"] },
+            { u: "UD Tabuleiro", m: "Arauá", ids: ["S-158 (Saída do Poço 1)"] },
+            { u: "UD Tatu", m: "Japoatã", ids: ["N-053 (Saída do Poço 1)"] },
+            { u: "UD Terra Caída", m: "Indiaroba", ids: ["S-164 (Saída do RAP)"] },
+            { u: "UD Tubarão", m: "Santo Amaro das Brotas", ids: ["NOVO (Saída do Poço 4)"] },
+            { u: "UD Urubu Grande", m: "Lagarto", ids: ["S-171 (Saída do REL)"] },
+            { u: "UD Zumbi/Jureminha", m: "Ribeira do Amparo / BA", ids: ["NOVO (Saída do REL)"] },
+            { u: "UD Mangue Grande", m: "Lagarto", ids: ["NOVO (Saída do Poço 1)"] },
+            { u: "UD Poço 02- 17de Março", m: "Aracaju", ids: ["NOVO (Saída do Poço 2)"] },
+            { u: "UD Poço 05- 17de Março", m: "Aracaju", ids: ["NOVO (Saída do Poço 5)"] },
+            { u: "UD LAR10", m: "Laranjeiras", ids: ["NOVO (Saída do Poço 10)"] },
+            { u: "UD RIB18", m: "Ribeirópolis", ids: ["NOVO (Saída do Poço 18)"] },
+            { u: "UD RIB19", m: "Ribeirópolis", ids: ["NOVO (Saída do Poço 19)"] },
+            { u: "UD Aningas - P1", m: "Pirambu", ids: ["NOVO (A DEFINIR)"] },
+            { u: "Iguá Saneamento", m: "", ids: ["-"] },
+        ];
         const APPSCRIPT_URL_PADRAO = 'https://script.google.com/macros/s/AKfycbz6rP4CDTwikplVHRqvOw0vtQ9FtzDNO3SHWpvd7Icj5zai4N8Zxv_scu0FqqBUt4nr/exec';
 
         function saveAppScriptUrl() {
@@ -861,6 +1001,8 @@
     const registro = ehFinal ? custom.cisu_fechamento : custom.cisu_abertura;
     if (registro) document.getElementById('registro_cco').value = registro;
     calcularDuracao();
+    // Recria o bloco de Pontos de Entrega com a unidade trazida do chamado
+    montarBlocoPontosFormulario({ resetar: true });
 }
                     }
                     
@@ -930,7 +1072,213 @@
             document.getElementById('duracao').value = "00:00:00";
             atualizarCamposEtapa();
             togglePercentualField();
+            const livres = document.getElementById('pontos_livres');
+            if (livres) livres.value = '';
+            montarBlocoPontosFormulario({ resetar: true });
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ==========================================================
+        // PONTOS DE ENTREGA DA UNIDADE — SELEÇÃO NO FORMULÁRIO
+        // (a seleção aqui é reproduzida exatamente na seção 3 da ficha em PDF)
+        // ==========================================================
+        let pontosEstado = { unidade: null, ids: [], selecionados: new Set() };
+        // guarda a última unidade reconhecida para auto-preencher "Cidade / Localidade"
+        // apenas quando o problema muda de unidade (não sobrescreve edição manual)
+        let unidadeLocalidadeAtual = null;
+
+        function normalizarTextoBusca(valor) {
+            return String(valor || '')
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .toUpperCase()
+                .replace(/[^A-Z0-9]+/g, ' ')
+                .trim();
+        }
+
+        function pontoIndefinido(texto) {
+            const n = normalizarTextoBusca(texto);
+            return n === '-' || /^\?+$/.test(n) || /A DEFINIR/.test(n);
+        }
+
+        function codigoPontoEntrega(texto) {
+            const m = String(texto || '').toUpperCase().trim().match(/^([A-Z]{1,3})\s*-\s*(\d{1,3})\b/);
+            return m ? m[1] + m[2] : '';
+        }
+
+        function tipoUnidade(nome) {
+            const primeira = String(nome || '').trim().split(/\s+/)[0] || '';
+            return (primeira === 'ETA' || primeira === 'UD') ? primeira : '';
+        }
+
+        function mesmoTipoUnidade(a, b) {
+            const ta = tipoUnidade(a);
+            const tb = tipoUnidade(b);
+            return !ta || !tb || ta === tb;
+        }
+
+        function procurarUnidadePontos(nome) {
+            const alvo = normalizarTextoBusca(nome);
+            if (!alvo) return null;
+            let candidatos = PONTOS_ENTREGA_BASE.filter(u => normalizarTextoBusca(u.u) === alvo);
+            if (!candidatos.length) {
+                // ignora o prefixo ETA/UD no nome digitado E no cadastro (ex.: "Aningas P1" -> "UD Aningas - P1"),
+                // mantendo a exigência de mesmo tipo (ETA com ETA, UD com UD)
+                const alvoSemPrefixo = alvo.replace(/^(ETA|UD)\s+/, '');
+                candidatos = alvoSemPrefixo ? PONTOS_ENTREGA_BASE.filter(u => {
+                    const t = normalizarTextoBusca(u.u).replace(/^(ETA|UD)\s+/, '');
+                    return t === alvoSemPrefixo && mesmoTipoUnidade(alvo, u.u);
+                }) : [];
+            }
+            if (!candidatos.length) {
+                candidatos = PONTOS_ENTREGA_BASE.filter(u => {
+                    const t = normalizarTextoBusca(u.u);
+                    const parecido = t.startsWith(alvo) || alvo.startsWith(t);
+                    return parecido && mesmoTipoUnidade(alvo, u.u);
+                });
+            }
+            return candidatos.length === 1 ? candidatos[0] : null;
+        }
+
+        function unidadeComPontoPlanilha(nome) {
+            const unidade = procurarUnidadePontos(nome);
+            if (!unidade) return null;
+            const ids = unidade.ids.filter(t => !pontoIndefinido(t));
+            return ids.length ? { u: unidade.u, ids: ids } : null;
+        }
+
+        function textoModoOcorrencia(identificacao, percentual) {
+            const pct = String(percentual || '').trim();
+            return 'Modo: ' + (identificacao || '—') + (pct ? ` (${pct})` : '') + ' | Seleção Manual Ativa';
+        }
+
+        function ocorrenciaEhParada() {
+            const v = document.getElementById('identificacao_ocorrencia').value || '';
+            return v.startsWith('Parada');
+        }
+
+        function montarBlocoPontosFormulario(opcoes = {}) {
+            const grid = document.getElementById('form_pontos_grid');
+            const freeWrap = document.getElementById('form_pontos_free_wrap');
+            const acoes = document.getElementById('form_pontos_actions');
+            const digitado = document.getElementById('sistema_upstream').value;
+            const unidade = unidadeComPontoPlanilha(digitado);
+            const idsValidos = unidade ? unidade.ids : [];
+
+            // AUTO-PREENCHIMENTO: "Cidade / Localidade" vem do cadastro (coluna
+            // Município da planilha). Dispara só quando a unidade afetada MUDA.
+            const unidadeCadastro = procurarUnidadePontos(digitado);
+            if (unidadeCadastro && unidadeCadastro.m && !pontoIndefinido(unidadeCadastro.m)) {
+                if (normalizarTextoBusca(unidadeLocalidadeAtual) !== normalizarTextoBusca(unidadeCadastro.u)) {
+                    document.getElementById('cidade').value = String(unidadeCadastro.m).toUpperCase();
+                }
+            }
+            unidadeLocalidadeAtual = unidadeCadastro ? unidadeCadastro.u : null;
+
+            document.getElementById('form_points_title').textContent = 'Aba de Pontos de Entrega da Unidade [' + (unidade ? unidade.u : (digitado || '—')) + ']:';
+            document.getElementById('form_points_mode').textContent = textoModoOcorrencia(
+                document.getElementById('identificacao_ocorrencia').value,
+                document.getElementById('percentual_reducao').value
+            );
+
+            const pontosEstadoAnterior = pontosEstado;
+            pontosEstado = { unidade: idsValidos.length ? unidade.u : null, ids: idsValidos, selecionados: new Set() };
+            // preserva a seleção manual quando apenas re-renderiza (resetar: false)
+            if (opcoes.resetar === false && idsValidos.length && pontosEstadoAnterior.unidade === pontosEstado.unidade) {
+                pontosEstado.selecionados = pontosEstadoAnterior.selecionados;
+            } else if (idsValidos.length && ocorrenciaEhParada()) {
+                // Quando o Tipo de Ocorrência é Parada, todos os pontos começam marcados
+                // como AFETADOS; o operador pode desmarcar.
+                idsValidos.forEach((_, i) => pontosEstado.selecionados.add(i));
+            }
+
+            if (idsValidos.length) {
+                freeWrap.classList.add('hidden');
+                acoes.classList.remove('hidden');
+                grid.classList.remove('hidden');
+                grid.innerHTML = '';
+                idsValidos.forEach((id, i) => {
+                    const afetado = pontosEstado.selecionados.has(i);
+                    const botao = document.createElement('button');
+                    botao.type = 'button';
+                    botao.setAttribute('aria-pressed', afetado ? 'true' : 'false');
+                    botao.title = afetado ? 'Clique para desmarcar (NORMAL)' : 'Clique para marcar (AFETADO)';
+                    botao.className = 'flex items-center justify-between gap-2 p-2 border rounded text-left text-xs font-bold transition ' + (afetado ? 'bg-blue-50 border-blue-400 text-blue-900 hover:bg-blue-100' : 'bg-white border-slate-300 text-slate-500 hover:bg-slate-100');
+                    const nome = document.createElement('span');
+                    nome.textContent = (afetado ? '[X] ' : '[ ] ') + id;
+                    const selo = document.createElement('span');
+                    selo.className = 'px-1.5 py-0.5 rounded text-[9px] tracking-wider text-white ' + (afetado ? 'bg-red-600' : 'bg-emerald-600');
+                    selo.textContent = afetado ? 'AFETADO' : 'NORMAL';
+                    botao.append(nome, selo);
+                    botao.onclick = () => alternarSelecaoPonto(i);
+                    grid.appendChild(botao);
+                });
+            } else {
+                freeWrap.classList.remove('hidden');
+                acoes.classList.add('hidden');
+                grid.classList.add('hidden');
+                grid.innerHTML = '';
+            }
+            sincronizarCampoPe();
+        }
+
+        function alternarSelecaoPonto(indice) {
+            if (pontosEstado.selecionados.has(indice)) pontosEstado.selecionados.delete(indice);
+            else pontosEstado.selecionados.add(indice);
+            montarBlocoPontosFormulario({ resetar: false });
+        }
+
+        function marcarTodosPontos(marcar) {
+            pontosEstado.selecionados = new Set(marcar ? pontosEstado.ids.map((_, i) => i) : []);
+            montarBlocoPontosFormulario({ resetar: false });
+        }
+
+        function sincronizarCampoPe() {
+            const pe = document.getElementById('pe_afetado');
+            if (!pe) return;
+            if (pontosEstado.ids.length) {
+                pe.value = pontosEstado.ids.filter((_, i) => pontosEstado.selecionados.has(i)).join(' ; ');
+            } else {
+                const livres = document.getElementById('pontos_livres');
+                pe.value = livres ? livres.value.toUpperCase() : '';
+            }
+            const contador = document.getElementById('form_pontos_count');
+            if (contador) contador.textContent = pontosEstado.ids.length
+                ? pontosEstado.selecionados.size + ' ponto(s) afetado(s) de ' + pontosEstado.ids.length
+                : '';
+        }
+
+        // Tenta atualizar a lista de pontos a partir da planilha central (opcional).
+        // Apps Script: implementar em doGet a ação abaixo; tabela 'PontosEntrega':
+        //   coluna A = Unidade | coluna B = Município/Localidade | colunas C em diante = Id's
+        //   if (e.parameter.acao == 'pontos_entrega') {
+        //     const ws = SpreadsheetApp.getActive().getSheetByName('PontosEntrega');
+        //     const valores = ws.getDataRange().getValues();
+        //     const unidades = [];
+        //     for (let i = 1; i < valores.length; i++) {
+        //       const nome = String(valores[i][0] || '').trim(); if (!nome) continue;
+        //       const m = String(valores[i][1] || '').trim();
+        //       const ids = valores[i].slice(2).map(String).map(s => s.trim()).filter(Boolean);
+        //       unidades.push({ u: nome, m: m, ids: ids });
+        //     }
+        //     return ContentService.createTextOutput(JSON.stringify({ encontrado: unidades.length > 0, unidades: unidades }))
+        //       .setMimeType(ContentService.MimeType.JSON);
+        //   }
+        // Enquanto a ação não existir na implantação, a lista embutida (PONTOS_ENTREGA_BASE) é usada.
+        async function carregarPontosEntregaDaPlanilha() {
+            try {
+                const raw = document.getElementById('appscript_url').value.trim();
+                if (!raw) return;
+                const base = raw.split('?')[0];
+                const response = await fetch(base + '?acao=pontos_entrega');
+                if (!response.ok) return;
+                const result = await response.json();
+                if (result && result.encontrado && Array.isArray(result.unidades) && result.unidades.length) {
+                    PONTOS_ENTREGA_BASE = result.unidades.map(u => ({ u: String(u.u || ''), m: String(u.m || ''), ids: Array.isArray(u.ids) ? u.ids.map(String) : [] }));
+                    montarBlocoPontosFormulario({ resetar: false });
+                }
+            } catch (err) {
+                // Sem a ação no Apps Script (restrição da implantação atual): segue com a lista embutida acima.
+            }
         }
 
         // ==========================================
@@ -1090,16 +1438,7 @@
                 responsabilidade_operacional: document.getElementById('responsabilidade_operacional').value,
                 pe_afetado: document.getElementById('pe_afetado').value,
                 causa_detalhada: document.getElementById('causa_detalhada').value,
-                impacto: document.getElementById('impacto').value,
-                medidas_imediatas: document.getElementById('medidas_imediatas').value,
-                acoes_corretivas: document.getElementById('acoes_corretivas').value,
-                contato_duvidas: document.getElementById('contato_duvidas').value,
-                nome_emissor: document.getElementById('nome_emissor').value,
-                cargo_emissor: document.getElementById('cargo_emissor').value,
-                matricula_emissor: document.getElementById('matricula_emissor').value,
-                nome_validador: document.getElementById('nome_validador').value,
-                cargo_validador: document.getElementById('cargo_validador').value,
-                matricula_validador: document.getElementById('matricula_validador').value
+                nome_emissor: document.getElementById('nome_emissor').value
             };
 
             const appscriptUrl = document.getElementById('appscript_url').value.trim();
@@ -1215,10 +1554,6 @@
             const durationText = durationMatch
                 ? `${durationMatch[1]}h ${durationMatch[2]}min`
                 : duration || '—';
-            const points = String(data.pe_afetado || '')
-                .split(/[\n;,]+/)
-                .map(point => point.trim())
-                .filter(Boolean);
 
             setText('pdf_protocol', data.chatwoot_id);
             setText('pdf_registry', data.registro_cco);
@@ -1232,44 +1567,51 @@
             setText('pdf_forecast', formatDateTimeForPdf(stage === 'FINAL' ? data.fim_previsto_dt : data.fim_dt));
             setText('pdf_finished', formatDateTimeForPdf(stage === 'FINAL' ? data.fim_dt : ''));
             setText('pdf_duration', durationText);
+            setText('pdf_solicitante', data.responsabilidade_operacional);
             setText('pdf_unit', data.sistema_upstream);
-            setText('pdf_location', data.cidade);
-            setText('pdf_responsibility', data.responsabilidade_operacional);
-            setText('pdf_impact', data.impacto);
+            const unidade = procurarUnidadePontos(data.sistema_upstream);
+            // Localização: usa a cidade digitada no formulário; se vazia, completa
+            // automaticamente com o Município da unidade (cadastro da planilha).
+            const localidadeTexto = String(data.cidade || '').trim()
+                || (unidade && unidade.m && !pontoIndefinido(unidade.m) ? String(unidade.m).toUpperCase() : '');
+            setText('pdf_location', localidadeTexto);
             setText('pdf_cause', data.causa_detalhada || data.especificacao);
-            setText('pdf_measures', data.medidas_imediatas);
-            setText('pdf_actions', data.acoes_corretivas);
-            setText('pdf_contact', data.contato_duvidas);
             setText('pdf_operator', data.nome_emissor);
-            setText('pdf_role', data.cargo_emissor);
-            setText('pdf_matricula', data.matricula_emissor);
-            setText('pdf_validator', data.nome_validador);
-            setText('pdf_validator_role', data.cargo_validador);
-            setText('pdf_validator_registration', data.matricula_validador);
-            setText('pdf_sent_at', '____/____/______ às ____:____');
-            setText('pdf_rule_duration', `1. Duração: ${stage === 'FINAL' ? 'data/hora de finalização' : 'previsão de normalização'} − data/hora de início.`);
-            setText('pdf_rule_location', `2. Localização da unidade registrada: ${data.cidade || 'não informada'}.`);
-            setText('pdf_rule_points', `3. Pontos de entrega: ${points.length} item(ns) informado(s) como afetado(s).`);
 
+            // ---- Seção 3: PONTOS DA CONCESSIONÁRIA AFETADOS ----
+            const peLinhas = String(data.pe_afetado || '')
+                .split(/[\n;,]+/)
+                .map(linha => linha.trim())
+                .filter(Boolean);
+            const textosAfetados = new Set(peLinhas.map(l => normalizarTextoBusca(l)).filter(Boolean));
+            const codigosAfetados = new Set(peLinhas.map(l => codigoPontoEntrega(l)).filter(Boolean));
+            const unidadeExibicao = unidade ? unidade.u : (String(data.sistema_upstream || '').trim());
+            setText('pdf_points_title', `Aba de Pontos de Entrega da Unidade [${unidadeExibicao || '—'}]:`);
+            setText('pdf_points_mode', textoModoOcorrencia(data.identificacao_ocorrencia, data.percentual_reducao));
+
+            const ids = unidade ? unidade.ids.filter(t => !pontoIndefinido(t)) : [];
+            const temGrade = ids.length > 0 && peLinhas.some(linha =>
+                ids.some(id => normalizarTextoBusca(id) === normalizarTextoBusca(linha) ||
+                    (codigoPontoEntrega(id) && codigoPontoEntrega(id) === codigoPontoEntrega(linha))));
             const pointsContainer = document.getElementById('pdf_points');
             pointsContainer.replaceChildren();
-            if (points.length) {
-                points.forEach(point => {
+            pointsContainer.classList.toggle('pdf-hidden', !temGrade);
+            document.getElementById('pdf_points_free_field').classList.toggle('pdf-hidden', temGrade);
+            if (temGrade) {
+                ids.forEach(id => {
+                    const afetado = textosAfetados.has(normalizarTextoBusca(id)) || (codigoPontoEntrega(id) && codigosAfetados.has(codigoPontoEntrega(id)));
                     const item = document.createElement('div');
-                    item.className = 'pdf-point';
+                    item.className = 'pdf-point' + (afetado ? '' : ' pdf-point-not-affected');
                     const name = document.createElement('span');
-                    name.textContent = `[X] ${point}`;
+                    name.textContent = (afetado ? '[X] ' : '[ ] ') + id;
                     const status = document.createElement('span');
-                    status.className = 'pdf-point-status';
-                    status.textContent = 'AFETADO';
+                    status.className = 'pdf-point-status' + (afetado ? '' : ' pdf-point-status-normal');
+                    status.textContent = afetado ? 'AFETADO' : 'NORMAL';
                     item.append(name, status);
                     pointsContainer.appendChild(item);
                 });
             } else {
-                const empty = document.createElement('div');
-                empty.className = 'pdf-point';
-                empty.textContent = 'Nenhum ponto informado';
-                pointsContainer.appendChild(empty);
+                document.getElementById('pdf_points_free').textContent = peLinhas.join(' ; ') || '—';
             }
         }
 
@@ -1298,16 +1640,7 @@
                     responsabilidade_operacional: document.getElementById('responsabilidade_operacional').value,
                     pe_afetado: document.getElementById('pe_afetado').value,
                     causa_detalhada: document.getElementById('causa_detalhada').value,
-                    impacto: document.getElementById('impacto').value,
-                    medidas_imediatas: document.getElementById('medidas_imediatas').value,
-                    acoes_corretivas: document.getElementById('acoes_corretivas').value,
-                    contato_duvidas: document.getElementById('contato_duvidas').value,
-                    nome_emissor: document.getElementById('nome_emissor').value,
-                    cargo_emissor: document.getElementById('cargo_emissor').value,
-                    matricula_emissor: document.getElementById('matricula_emissor').value,
-                    nome_validador: document.getElementById('nome_validador').value,
-                    cargo_validador: document.getElementById('cargo_validador').value,
-                    matricula_validador: document.getElementById('matricula_validador').value
+                    nome_emissor: document.getElementById('nome_emissor').value
                 };
 
                 populatePdfFields(formData);
@@ -1373,15 +1706,9 @@
                 throw new Error('A biblioteca de geração de PDF não foi carregada.');
             }
             const element = document.getElementById('pdf-container');
-            document.getElementById('pdf_sent_at').textContent = new Date().toLocaleString('pt-BR', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
-            });
+            const agora = new Date();
+            const pad2 = (n) => String(n).padStart(2, '0');
+            document.getElementById('pdf_sent_at').textContent = `${pad2(agora.getDate())}/${pad2(agora.getMonth() + 1)}/${agora.getFullYear()}, ${pad2(agora.getHours())}:${pad2(agora.getMinutes())}:${pad2(agora.getSeconds())}`;
             const opt = { margin: 0, filename: `${filename} - Ficha CISU.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }, pagebreak: { mode: ['css', 'legacy'] } };
             try {
                 await html2pdf().set(opt).from(element).save();
@@ -1415,6 +1742,18 @@
             atualizarCamposEtapa();
             loadAppScriptUrl();
             renderTable();
+
+            // Bloco de Pontos de Entrega da Unidade (seção 3 da ficha)
+            document.getElementById('sistema_upstream').addEventListener('input', () => montarBlocoPontosFormulario({ resetar: true }));
+            document.getElementById('identificacao_ocorrencia').addEventListener('change', () => montarBlocoPontosFormulario({ resetar: true }));
+            document.getElementById('percentual_reducao').addEventListener('input', () => {
+                document.getElementById('form_points_mode').textContent = textoModoOcorrencia(
+                    document.getElementById('identificacao_ocorrencia').value,
+                    document.getElementById('percentual_reducao').value
+                );
+            });
+            montarBlocoPontosFormulario({ resetar: true });
+            carregarPontosEntregaDaPlanilha();
         });
     </script>
 </body>
