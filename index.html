@@ -142,7 +142,7 @@
                         <h3 class="text-sm font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2"><span>🔗</span> Rastreamento e Conexão de Protocolos</h3>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Nº Chamado Chatwoot *</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Nº Protocolo / Chamado *</label>
                                 <div class="flex gap-2">
                                     <input type="text" id="chatwoot_id" required placeholder="Ex: 4521" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
                                     <button type="button" onclick="buscarDadosChatwoot()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-2 rounded text-xs shadow transition flex items-center justify-center" title="Buscar no Chatwoot">
@@ -151,7 +151,7 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Registro N° CCO (DESO) *</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Registro da CISU *</label>
                                 <input type="text" id="registro_cco" required placeholder="Ex: 1138.2026 ou 1138F.2026" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
                             <div>
@@ -162,7 +162,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Data da Emissão *</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Data do Registro *</label>
                                 <input type="date" id="data_emissao" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
                         </div>
@@ -173,7 +173,7 @@
                         <h3 class="text-sm font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2"><span>📋</span> Classificação da Ocorrência</h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Intermitência *</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Intermitência *</label>
                                 <select id="tipo_intermitencia" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                                     <option value="Intermitência Programada">Intermitência Programada</option>
                                     <option value="Intermitência Não Programada">Intermitência Não Programada</option>
@@ -189,7 +189,7 @@
                                 </select>
                             </div>
                             <div class="md:col-span-3">
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Serviço *</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Parada *</label>
                                 <select id="identificacao_ocorrencia" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                                     <option value="Parada Programada">Parada Programada</option>
                                     <option value="Parada Não Programada">Parada Não Programada</option>
@@ -204,7 +204,7 @@
                             </div>
 
                             <div class="md:col-span-3">
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Especificar Ocorrência *</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Serviço *</label>
                                 <input type="text" id="especificacao" required placeholder="Ex: RECUPERAÇÃO DE NÍVEL A PEDIDO DA IGUÁ." class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
                             </div>
                         </div>
@@ -215,39 +215,39 @@
                         <h3 class="text-sm font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2"><span>⏱️</span> Prazos e Localização UPSTREAM</h3>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Início da Ocorrência *</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Data e Hora Início *</label>
                                 <input type="datetime-local" id="inicio_dt" onchange="calcularDuracao()" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
                             <div>
-                                <label id="fim_label" class="block text-xs font-bold text-slate-700 mb-1">Previsão de Normalização *</label>
+                                <label id="fim_label" class="block text-xs font-bold text-slate-700 mb-1">Data e Hora Previsão Fin. *</label>
                                 <input type="datetime-local" id="fim_dt" onchange="calcularDuracao()" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Previsão (opcional, no registro FINAL)</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Data e Hora Previsão Fin. (opcional, no registro FINAL)</label>
                                 <input type="datetime-local" id="fim_previsto_dt" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Duração</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Duração (cálculo auto)</label>
                                 <input type="text" id="duracao" readonly placeholder="00:00:00" class="w-full text-sm p-2 border border-slate-300 rounded outline-none bg-slate-200 font-mono font-bold text-blue-900">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Sistema UPSTREAM Afetado *</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Unidade Operacional *</label>
                                 <input type="text" id="sistema_upstream" required placeholder="Ex: ETA RIACHUELO" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Cidade / Localidade *</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Localização da Unidade *</label>
                                 <input type="text" id="cidade" required placeholder="Ex: CIDADE DE RIACHUELO" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Responsabilidade Operacional</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Solicitante</label>
                                 <input type="text" id="responsabilidade_operacional" placeholder="Ex: Manutenção Operacional DESO" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Ponto(s) de Entrega (PE) Afetado(s) * <span class="text-[10px] text-slate-500 font-medium">(marque no bloco abaixo)</span></label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Ponto(s) de Entrega Afetado(s) * <span class="text-[10px] text-slate-500 font-medium">(marque no bloco abaixo)</span></label>
                                 <input type="text" id="pe_afetado" readonly required placeholder="Seleção feita no bloco 'Pontos de Entrega da Unidade'" class="w-full text-sm p-2 border border-slate-300 rounded outline-none uppercase bg-slate-100">
                             </div>
                             <div class="md:col-span-3">
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Causa(s) Detalhada(s) da Ocorrência *</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Especificação / Causa Detalhada *</label>
                                 <textarea id="causa_detalhada" rows="2" required placeholder="Ex: RECUPERAÇÃO DE NÍVEL." class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase"></textarea>
                             </div>
                         </div>
@@ -279,7 +279,7 @@
                         <h3 class="text-sm font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2"><span>👤</span> Emissor / Responsável DESO</h3>
                         <div class="grid grid-cols-1 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Nome do Representante da DESO *</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Operador Responsável pelo Preenchimento *</label>
                                 <input type="text" id="nome_emissor" required placeholder="Ex: THIAGO OLIVEIRA COSTA" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
                             </div>
                         </div>
@@ -318,7 +318,7 @@
                                 <th class="p-3 border">Estágio</th>
                                 <th class="p-3 border">Data Emissão</th>
                                 <th class="p-3 border">Tipo</th>
-                                <th class="p-3 border">Tipo de Serviço</th>
+                                <th class="p-3 border">Tipo de Parada</th>
                                 <th class="p-3 border">% Redução</th>
                                 <th class="p-3 border">Sistema UPSTREAM</th>
                                 <th class="p-3 border">Cidade / PE</th>
@@ -1192,8 +1192,8 @@
         function atualizarCamposEtapa() {
             const isFinal = document.getElementById('estagio').value === 'FINAL';
             document.getElementById('fim_label').textContent = isFinal
-                ? 'Data e hora de finalização *'
-                : 'Previsão de normalização *';
+                ? 'Data e Hora Finalização *'
+                : 'Data e Hora Previsão Fin. *';
         }
 
         function togglePercentualField() {
