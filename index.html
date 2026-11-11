@@ -244,7 +244,7 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Solicitante</label>
-                                <input type="text" id="responsabilidade_operacional" readonly placeholder="IGUÁ ou DESO — preenchido automaticamente pelo Chatwoot" class="w-full text-sm p-2 border border-slate-300 rounded outline-none uppercase bg-slate-100">
+                                <input type="text" id="responsabilidade_operacional" readonly placeholder="Terceiros, Manancial, Iguá ou DESO — preenchido automaticamente pelo Chatwoot" class="w-full text-sm p-2 border border-slate-300 rounded outline-none uppercase bg-slate-100">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Ponto(s) de Entrega Afetado(s) * <span class="text-[10px] text-slate-500 font-medium">(marque no bloco abaixo)</span></label>
@@ -1068,18 +1068,37 @@
             if (document.getElementById('reportAllMonth')) document.getElementById('reportAllMonth').value = mesLocal;
         }
 
-        // Solicitante aceita somente IGUÁ ou DESO. Qualquer outro valor que venha
-        // do servidor (nome do operador, unidade, texto bruto do Chatwoot como
-        // "_NOME_ > UNIDADE: ...") é descartado e o campo fica vazio.
-        function normalizaSolicitante(valor) {
+        // Normaliza as quatro classificações de responsabilidade definidas no SQL.
+        function normalizaResponsabilidade(valor) {
             const t = String(valor || '')
                 .replace(/_+/g, ' ')
                 .replace(/\s+/g, ' ')
                 .trim()
                 .toUpperCase();
             const s = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            if (s.indexOf('IGUA') !== -1) return 'IGUÁ';
-            if (s.indexOf('DESO') !== -1) return 'DESO';
+            if (s === 'TERCEIROS') return 'TERCEIROS';
+            if (s === 'MANANCIAL') return 'MANANCIAL';
+            if (s === 'IGUA') return 'IGUÁ';
+            if (s === 'DESO') return 'DESO';
+            return '';
+        }
+
+        // Reproduz a prioridade do SQL: tipo_servico antes de tipo_contato.
+        function calculaResponsabilidade(custom) {
+            custom = custom || {};
+            const servico = String(custom.tipo_servico || '').trim().toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const contato = String(custom.tipo_contato || '').trim().toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+            if (servico === 'desabastecimento/instabilidade de energia eletrica (concessionaria)' ||
+                servico === 'furto de cabos e equipamentos') return 'TERCEIROS';
+
+            if (servico === 'captacao seca ou com baixo nivel (manancial)' ||
+                servico === 'qualidade do manancial') return 'MANANCIAL';
+
+            if (contato === 'cliente') return 'IGUÁ';
+            if (contato === 'operador') return 'DESO';
             return '';
         }
 
@@ -1130,10 +1149,9 @@
                         }
                     }
 
-                    // Solicitante (IGUÁ ou DESO) vem da primeira mensagem recebida no Chatwoot.
-                    // Só aceita IGUÁ ou DESO — qualquer outra resposta do servidor
-                    // é descartada e o campo fica vazio.
-                    document.getElementById('responsabilidade_operacional').value = normalizaSolicitante(d.solicitante);
+                    // Responsabilidade calculada pelo backend conforme a regra do SQL:
+                    // Terceiros, Manancial, Iguá ou DESO, nessa ordem de prioridade.
+                    document.getElementById('responsabilidade_operacional').value = normalizaResponsabilidade(d.responsabilidade || calculaResponsabilidade(custom));
 
                     // O Emissor continua sendo o usuário autenticado no Google; nunca usar o responsável do Chatwoot.
                     preencherEmissorLogado();
@@ -1202,7 +1220,7 @@
 }
                     }
                     
-                    alert(`✅ Chamado #${d.chatwoot_id} encontrado no Chatwoot!\nSolicitante: ${normalizaSolicitante(d.solicitante) || 'Não identificado'}`);
+                    alert(`✅ Chamado #${d.chatwoot_id} encontrado no Chatwoot!\nResponsabilidade: ${normalizaResponsabilidade(d.responsabilidade || calculaResponsabilidade(d.custom_attributes)) || 'Não identificada'}`);
                 } else {
                     // Mostra o erro do Servidor
                     alert("Falha na busca!\nMotivo: " + result.erro);
@@ -1686,7 +1704,7 @@
                 duracao: document.getElementById('duracao').value || "00:00:00",
                 sistema_upstream: document.getElementById('sistema_upstream').value,
                 cidade: document.getElementById('cidade').value,
-                responsabilidade_operacional: normalizaSolicitante(document.getElementById('responsabilidade_operacional').value),
+                responsabilidade_operacional: normalizaResponsabilidade(document.getElementById('responsabilidade_operacional').value),
                 pe_afetado: document.getElementById('pe_afetado').value,
                 causa_detalhada: document.getElementById('causa_detalhada').value,
                 nome_emissor: document.getElementById('nome_emissor').value
@@ -1861,7 +1879,7 @@
             setText('pdf_forecast', formatDateTimeForPdf(encerrado ? data.fim_previsto_dt : data.fim_dt));
             setText('pdf_finished', formatDateTimeForPdf(encerrado ? data.fim_dt : ''));
             setText('pdf_duration', durationText);
-            setText('pdf_solicitante', normalizaSolicitante(data.responsabilidade_operacional));
+            setText('pdf_solicitante', normalizaResponsabilidade(data.responsabilidade_operacional));
             setText('pdf_unit', data.sistema_upstream);
             const unidade = procurarUnidadePontos(data.sistema_upstream);
             // Localização: usa a cidade digitada no formulário; se vazia, completa
@@ -1935,7 +1953,7 @@
                     duracao: document.getElementById('duracao').value,
                     sistema_upstream: document.getElementById('sistema_upstream').value,
                     cidade: document.getElementById('cidade').value,
-                    responsabilidade_operacional: normalizaSolicitante(document.getElementById('responsabilidade_operacional').value),
+                    responsabilidade_operacional: normalizaResponsabilidade(document.getElementById('responsabilidade_operacional').value),
                     pe_afetado: document.getElementById('pe_afetado').value,
                     causa_detalhada: document.getElementById('causa_detalhada').value,
                     nome_emissor: document.getElementById('nome_emissor').value
