@@ -32,7 +32,7 @@
         .pdf-value-blue { background: #eef5ff; border-color: #91b9ed; color: #17438b; }
         .pdf-value-red { background: #fff3f3; border-color: #f1b8b8; color: #a31616; }
         .pdf-value-green { background: #effbf3; border-color: #a8e8bf; color: #176b36; }
-        .pdf-stage { display: flex; gap: 5mm; align-items: center; min-height: 7mm; padding: 1.5mm 2mm; border: 1px solid #cad6e3; border-radius: 1mm; background: #f7f9fb; font-weight: bold; }
+        .pdf-stage { display: flex; flex-wrap: wrap; row-gap: 1mm; gap: 1mm 4mm; align-items: center; min-height: 7mm; padding: 1.5mm 2mm; border: 1px solid #cad6e3; border-radius: 1mm; background: #f7f9fb; font-weight: bold; }
         .pdf-points { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5mm; }
         .pdf-point { display: flex; justify-content: space-between; gap: 2mm; padding: 1.5mm 2mm; border: 1px solid #c8dcfb; border-radius: 1mm; background: #f0f6ff; color: #17438b; font-size: 7pt; }
         .pdf-point-status { color: #a31616; font-size: 6pt; font-weight: bold; }
@@ -41,6 +41,8 @@
         .pdf-points-headline { display: flex; justify-content: space-between; align-items: baseline; gap: 4mm; margin-bottom: 2mm; font-size: 7.5pt; font-weight: bold; color: #17283d; }
         .pdf-points-mode { color: #075b9d; font-size: 6.5pt; font-weight: bold; text-align: right; }
         .pdf-hidden { display: none !important; }
+        .pdf-cancel-banner { margin: 0 0 3mm; padding: 2.5mm 4mm; background: #c8102e; color: #fff; text-align: center; font-size: 11pt; font-weight: bold; letter-spacing: 1.5mm; border-radius: 1mm; }
+        .pdf-cancel-stamp { position: absolute; top: 118mm; left: 22mm; width: 166mm; padding: 4mm 0; text-align: center; transform: rotate(-24deg); border: 1.2mm solid rgba(200,16,46,0.45); border-radius: 3mm; color: rgba(200,16,46,0.40); font-size: 46pt; font-weight: bold; letter-spacing: 3mm; z-index: 5; pointer-events: none; }
         .pdf-declaration { margin-top: 3mm; padding: 2mm 3mm; border: 1px solid #c9d5e2; border-radius: 1.5mm; background: #f7f9fb; color: #17283d; font-size: 6.5pt; font-weight: bold; font-style: italic; text-align: justify; }
         .pdf-sign-block { display: flex; justify-content: space-between; align-items: flex-end; gap: 8mm; margin-top: 5mm; font-size: 6.5pt; }
         .pdf-sign-operator { flex: 1.3; text-align: center; min-width: 0; }
@@ -160,6 +162,7 @@
                                 <select id="estagio" onchange="atualizarCamposEtapa(); calcularDuracao();" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                                     <option value="INICIAL">INICIAL</option>
                                     <option value="FINAL">FINAL</option>
+                                    <option value="CANCELADO">CANCELAMENTO</option>
                                 </select>
                             </div>
                             <div>
@@ -453,12 +456,15 @@
                 </div>
             </header>
 
+            <div id="pdf_cancel_banner" class="pdf-cancel-banner pdf-hidden">REGISTRO CANCELADO</div>
+            <div id="pdf_cancel_stamp" class="pdf-cancel-stamp pdf-hidden">CANCELADO</div>
+
             <section class="pdf-section">
                 <div class="pdf-section-title"><span>1. IDENTIFICAÇÃO</span></div>
                 <div class="pdf-card pdf-grid pdf-grid-4">
                     <div class="pdf-field"><span class="pdf-label">Nº PROTOCOLO / CHAMADO</span><div id="pdf_protocol" class="pdf-value pdf-value-blue"></div></div>
                     <div class="pdf-field"><span class="pdf-label">REGISTRO DA CISU</span><div id="pdf_registry" class="pdf-value"></div></div>
-                    <div class="pdf-field"><span class="pdf-label">TIPO DE REGISTRO</span><div class="pdf-stage"><span id="pdf_stage_initial"></span><span id="pdf_stage_final"></span></div></div>
+                    <div class="pdf-field"><span class="pdf-label">TIPO DE REGISTRO</span><div class="pdf-stage"><span id="pdf_stage_initial"></span><span id="pdf_stage_final"></span><span id="pdf_stage_cancel"></span></div></div>
                     <div class="pdf-field"><span class="pdf-label">DATA DO REGISTRO</span><div id="pdf_emission_date" class="pdf-value"></div></div>
                 </div>
             </section>
@@ -1136,7 +1142,7 @@
                     if(custom) {
                         if (custom) {
     // Chamados com registro de fechamento no Chatwoot são carregados como FINAL.
-    if (custom.cisu_fechamento) {
+    if (custom.cisu_fechamento && document.getElementById('estagio').value !== 'CANCELADO') {
         document.getElementById('estagio').value = 'FINAL';
         atualizarCamposEtapa();
     }
@@ -1188,8 +1194,7 @@
     document.getElementById('especificacao').value = custom.tipo_servico.toUpperCase();
 }
     // Registro CISU conforme o tipo de registro escolhido
-    const ehFinal = document.getElementById('estagio').value === 'FINAL';
-    const registro = ehFinal ? custom.cisu_fechamento : custom.cisu_abertura;
+    const registro = registroPorEtapa(document.getElementById('estagio').value, chatwootRegistros);
     if (registro) document.getElementById('registro_cco').value = registro;
     calcularDuracao();
     // Recria o bloco de Pontos de Entrega com a unidade trazida do chamado
@@ -1236,14 +1241,24 @@
             }
         }
 
+        // Registro da CISU conforme o tipo: INICIAL = abertura, FINAL = fechamento,
+        // CANCELAMENTO = registro do Chatwoot com a letra final trocada por C (A/F -> C).
+        function registroPorEtapa(etapa, regs) {
+            if (etapa === 'FINAL') return regs.fechamento;
+            if (etapa === 'CANCELADO') {
+                const base = String(regs.fechamento || regs.abertura || '').trim();
+                return base.replace(/[AF]$/i, 'C');
+            }
+            return regs.abertura;
+        }
+
         function atualizarCamposEtapa() {
-            const isFinal = document.getElementById('estagio').value === 'FINAL';
-            document.getElementById('fim_label').textContent = isFinal
+            const etapa = document.getElementById('estagio').value;
+            document.getElementById('fim_label').textContent = etapa === 'FINAL'
                 ? 'Data e Hora Finalização *'
-                : 'Data e Hora Previsão Fin. *';
-            // Registro da CISU é automático: sempre o registro do Chatwoot
-            // conforme o tipo de registro (INICIAL = abertura, FINAL = fechamento).
-            document.getElementById('registro_cco').value = isFinal ? chatwootRegistros.fechamento : chatwootRegistros.abertura;
+                : (etapa === 'CANCELADO' ? 'Data e Hora do Cancelamento *' : 'Data e Hora Previsão Fin. *');
+            // Registro da CISU é automático, conforme o tipo de registro.
+            document.getElementById('registro_cco').value = registroPorEtapa(etapa, chatwootRegistros);
         }
 
         function togglePercentualField() {
@@ -1759,7 +1774,7 @@
                     <td class="p-2 border"><button onclick="downloadPdfForRecord(${item.id})" class="bg-red-600 hover:bg-red-700 text-white font-bold px-2 py-1 rounded text-[10px] shadow">📄 PDF</button></td>
                     <td class="p-2 border font-bold text-blue-700">${item.chatwoot_id}</td>
                     <td class="p-2 border font-bold">${item.registro_cco}</td>
-                    <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.estagio === 'INICIAL' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">${item.estagio}</span></td>
+                    <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.estagio === 'INICIAL' ? 'bg-amber-100 text-amber-800' : (item.estagio === 'CANCELADO' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800')}">${item.estagio}</span></td>
                     <td class="p-2 border">${formatDate(item.data_emissao)}</td>
                     <td class="p-2 border">${item.tipo_intermitencia}</td>
                     <td class="p-2 border">${item.identificacao_ocorrencia}</td>
@@ -1815,7 +1830,8 @@
         }
 
         function populatePdfFields(data) {
-            const stage = data.estagio === 'FINAL' ? 'FINAL' : 'INICIAL';
+            const stage = data.estagio === 'FINAL' ? 'FINAL' : (data.estagio === 'CANCELADO' ? 'CANCELADO' : 'INICIAL');
+            const encerrado = stage !== 'INICIAL';
             const setText = (id, value) => {
                 document.getElementById(id).textContent = String(value || '').trim() || '—';
             };
@@ -1835,12 +1851,15 @@
             setText('pdf_emission_date', formatDate(data.data_emissao));
             setText('pdf_stage_initial', `${stage === 'INICIAL' ? '(X)' : '( )'} Abertura (Inicial)`);
             setText('pdf_stage_final', `${stage === 'FINAL' ? '(X)' : '( )'} Fechamento (Final)`);
+            setText('pdf_stage_cancel', `${stage === 'CANCELADO' ? '(X)' : '( )'} Cancelamento`);
+            document.getElementById('pdf_cancel_banner').classList.toggle('pdf-hidden', stage !== 'CANCELADO');
+            document.getElementById('pdf_cancel_stamp').classList.toggle('pdf-hidden', stage !== 'CANCELADO');
             setText('pdf_intermitencia', data.tipo_intermitencia);
             setText('pdf_service', data.especificacao);
             setText('pdf_occurrence', `${data.tipo_ocorrencia || ''}${data.percentual_reducao ? ` (${data.percentual_reducao})` : ''}${data.identificacao_ocorrencia ? ` - ${data.identificacao_ocorrencia}` : ''}`);
             setText('pdf_start', formatDateTimeForPdf(data.inicio_dt));
-            setText('pdf_forecast', formatDateTimeForPdf(stage === 'FINAL' ? data.fim_previsto_dt : data.fim_dt));
-            setText('pdf_finished', formatDateTimeForPdf(stage === 'FINAL' ? data.fim_dt : ''));
+            setText('pdf_forecast', formatDateTimeForPdf(encerrado ? data.fim_previsto_dt : data.fim_dt));
+            setText('pdf_finished', formatDateTimeForPdf(encerrado ? data.fim_dt : ''));
             setText('pdf_duration', durationText);
             setText('pdf_solicitante', normalizaSolicitante(data.responsabilidade_operacional));
             setText('pdf_unit', data.sistema_upstream);
