@@ -154,7 +154,7 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Registro da CISU *</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Registro da CISU (opcional)</label>
                                 <input type="text" id="registro_cco" readonly placeholder="Preenchido automaticamente pelo Chatwoot" class="w-full text-sm p-2 border border-slate-300 rounded outline-none uppercase bg-slate-100">
                             </div>
                             <div>
@@ -178,14 +178,14 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Intermitência *</label>
-                                <select id="tipo_intermitencia" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                <select id="tipo_intermitencia" disabled required class="w-full text-sm p-2 border border-slate-300 rounded outline-none bg-slate-100">
                                     <option value="Intermitência Programada">Intermitência Programada</option>
                                     <option value="Intermitência Não Programada">Intermitência Não Programada</option>
                                 </select>
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Ocorrência *</label>
-                                <select id="tipo_ocorrencia" onchange="togglePercentualField()" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                <select id="tipo_ocorrencia" onchange="togglePercentualField()" disabled required class="w-full text-sm p-2 border border-slate-300 rounded outline-none bg-slate-100">
                                     <option value="">Selecione...</option>
                                     <option value="Dúvida/Informação">Dúvida/Informação</option>
                                     <option value="Parada total">Parada total</option>
@@ -194,7 +194,7 @@
                             </div>
                             <div class="md:col-span-3">
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Parada *</label>
-                                <select id="identificacao_ocorrencia" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                <select id="identificacao_ocorrencia" disabled required class="w-full text-sm p-2 border border-slate-300 rounded outline-none bg-slate-100">
                                     <option value="Parada Programada">Parada Programada</option>
                                     <option value="Parada Não Programada">Parada Não Programada</option>
                                 </select>
@@ -203,13 +203,13 @@
                             <div id="div_percentual_reducao" class="hidden md:col-span-3 bg-amber-50 p-3 rounded-md border border-amber-300">
                                 <label class="block text-xs font-bold text-amber-900 mb-1">Percentual de Redução *</label>
                                 <div class="flex items-center gap-2">
-                                    <input type="text" id="percentual_reducao" placeholder="Ex: 20%" class="w-full md:w-1/3 text-sm p-2 border border-amber-400 rounded focus:ring-2 focus:ring-amber-500 outline-none bg-white font-bold text-amber-900">
+                                    <input type="text" id="percentual_reducao" readonly placeholder="Ex: 20%" class="w-full md:w-1/3 text-sm p-2 border border-amber-400 rounded focus:ring-2 focus:ring-amber-500 outline-none bg-white font-bold text-amber-900">
                                 </div>
                             </div>
 
                             <div class="md:col-span-3">
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Serviço *</label>
-                                <input type="text" id="especificacao" required placeholder="Ex: RECUPERAÇÃO DE NÍVEL A PEDIDO DA IGUÁ." class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Serviço</label>
+                                <input type="text" id="especificacao" readonly placeholder="Preenchido automaticamente pelo Chatwoot" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
                             </div>
                         </div>
                     </div>
@@ -220,15 +220,15 @@
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Data e Hora Início *</label>
-                                <input type="datetime-local" id="inicio_dt" onchange="calcularDuracao()" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                                <input type="datetime-local" id="inicio_dt" onchange="calcularDuracao()" readonly required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
                             <div>
                                 <label id="fim_label" class="block text-xs font-bold text-slate-700 mb-1">Data e Hora Previsão Fin. *</label>
-                                <input type="datetime-local" id="fim_dt" onchange="calcularDuracao()" required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                                <input type="datetime-local" id="fim_dt" onchange="calcularDuracao()" readonly required class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Data e Hora Previsão Fin. (opcional, no registro FINAL)</label>
-                                <input type="datetime-local" id="fim_previsto_dt" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                                <input type="datetime-local" id="fim_previsto_dt" readonly class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Duração (cálculo auto)</label>
@@ -236,11 +236,11 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Unidade Operacional *</label>
-                                <input type="text" id="sistema_upstream" required placeholder="Ex: ETA RIACHUELO" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
+                                <input type="text" id="sistema_upstream" readonly required placeholder="Ex: ETA RIACHUELO" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Localização da Unidade *</label>
-                                <input type="text" id="cidade" required placeholder="Ex: CIDADE DE RIACHUELO" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
+                                <input type="text" id="cidade" readonly required placeholder="Ex: CIDADE DE RIACHUELO" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Solicitante</label>
@@ -251,8 +251,8 @@
                                 <input type="text" id="pe_afetado" readonly required placeholder="Seleção feita no bloco 'Pontos de Entrega da Unidade'" class="w-full text-sm p-2 border border-slate-300 rounded outline-none uppercase bg-slate-100">
                             </div>
                             <div class="md:col-span-3">
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Especificação / Causa Detalhada *</label>
-                                <textarea id="causa_detalhada" rows="2" required placeholder="Ex: RECUPERAÇÃO DE NÍVEL." class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase"></textarea>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Especificação / Causa Detalhada (opcional)</label>
+                                <textarea id="causa_detalhada" rows="2" placeholder="Ex: RECUPERAÇÃO DE NÍVEL." class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase"></textarea>
                             </div>
                         </div>
                     </div>
@@ -1433,7 +1433,7 @@
                     botao.title = afetado ? 'Clique para desmarcar (NORMAL)' : 'Clique para marcar (AFETADO)';
                     botao.className = 'flex items-center justify-between gap-2 p-2 border rounded text-left text-xs font-bold transition ' + (afetado ? 'bg-blue-50 border-blue-400 text-blue-900 hover:bg-blue-100' : 'bg-white border-slate-300 text-slate-500 hover:bg-slate-100');
                     const nome = document.createElement('span');
-                    nome.textContent = (afetado ? '[X] ' : '[ ] ') + id;
+                    nome.textContent = (afetado ? '[X] ' : '[ ] ') + 'ID ' + id;
                     const selo = document.createElement('span');
                     selo.className = 'px-1.5 py-0.5 rounded text-[9px] tracking-wider text-white ' + (afetado ? 'bg-red-600' : 'bg-emerald-600');
                     selo.textContent = afetado ? 'AFETADO' : 'NORMAL';
@@ -1646,7 +1646,7 @@
         // (2) limite de 48h após a finalização do chamado.
         function validarCamposAutomaticos(acao) {
             const faltando = [];
-            if (!document.getElementById('registro_cco').value.trim()) faltando.push('Registro da CISU');
+            // Registro da CISU é opcional; quando existir, é preenchido automaticamente.
             if (!document.getElementById('data_emissao').value) faltando.push('Data do Registro');
             if (faltando.length) {
                 alert(`⛔ Não é possível ${acao}.\nFalta preencher: ${faltando.join(' e ')}.\nEstes campos são preenchidos automaticamente — busque o chamado no Chatwoot para buscar o registro da CISU.`);
