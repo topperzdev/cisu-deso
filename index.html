@@ -172,7 +172,40 @@
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Data do Registro *</label>
                                 <input type="date" id="data_emissao" readonly class="w-full text-sm p-2 border border-slate-300 rounded outline-none bg-slate-100">
                             </div>
+                            <div class="md:col-span-4 flex items-start gap-3 bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                                <input type="checkbox" id="chk_recorrencia" onchange="aplicarModoRecorrencia()" class="mt-0.5 w-4 h-4 accent-indigo-600">
+                                <label for="chk_recorrencia" class="text-xs font-bold text-indigo-900 cursor-pointer select-none leading-snug">
+                                    🔁 CISU de Recorrência (E-mail)
+                                    <span class="block font-medium text-indigo-700 normal-case">Ocorrências que se repetem e chegam por e-mail, sem chamado no Chatwoot. Ao marcar, abre a lista "Qual CISU de recorrência?" abaixo para preencher o formulário e gerar o PDF com as respostas fixas.</span>
+                                </label>
+                            </div>
                         </div>
+                    </div>
+
+                    <!-- BLOCO R: BOX DE CISU DE RECORRÊNCIA (E-MAIL) -->
+                    <div id="bloco_recorrencia" class="hidden bg-indigo-50 p-4 rounded-lg border-2 border-indigo-300 space-y-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-2"><span>🔁</span> Qual CISU de Recorrência? (chegou por e-mail)</h3>
+                            <p class="text-xs text-indigo-700 mt-1">Escolha o caso abaixo: as <b>respostas fixas</b> são aplicadas no formulário e o PDF é gerado no modelo padrão da ficha CISU. Depois, ajuste apenas a <b>Data/Hora Início</b> e a <b>Data/Hora Fim</b> (editáveis no Bloco C) conforme o e-mail e gere novamente se precisar.</p>
+                        </div>
+                        <div id="rec_casos_grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2"></div>
+                        <div id="rec_selecionado" class="hidden bg-white p-3 rounded-lg border border-indigo-200 space-y-3">
+                            <div class="flex items-start gap-2">
+                                <span class="text-lg leading-none mt-0.5">✅</span>
+                                <div>
+                                    <p id="rec_selecionado_titulo" class="text-sm font-bold text-slate-900"></p>
+                                    <p class="text-xs text-slate-500">Respostas fixas aplicadas. Confira os campos do Bloco C antes de salvar na planilha.</p>
+                                </div>
+                            </div>
+                            <div id="rec_resumo_campos" class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs"></div>
+                            <p id="rec_status" class="hidden text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded p-2"></p>
+                            <div class="flex flex-wrap gap-2 pt-1">
+                                <button type="button" onclick="generatePDFFromCurrentForm()" class="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg text-xs shadow transition flex items-center gap-2"><span>📄</span> Gerar PDF da CISU (respostas fixas)</button>
+                                <button type="button" onclick="handleFormSubmit({ preventDefault: function () {} })" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs shadow transition flex items-center gap-2"><span>💾</span> Salvar Registro na Planilha</button>
+                                <button type="button" onclick="limparSelecaoRecorrencia()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-4 py-2 rounded-lg text-xs transition">Limpar seleção do caso</button>
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-indigo-500">Fonte das respostas fixas: fichas ATDO 001 &ndash; Comunicação de Intermitência nos Serviços UPSTREAM (registros 1529 a 1535.2026).</p>
                     </div>
 
                     <!-- BLOCO B -->
@@ -1299,7 +1332,9 @@
             document.getElementById('fim_label').textContent = etapa === 'FINAL'
                 ? 'Data e Hora Finalização *'
                 : (etapa === 'CANCELADO' ? 'Data e Hora do Cancelamento *' : 'Data e Hora Previsão Fin. *');
-            // Registro da CISU é automático, conforme o tipo de registro.
+            // No modo recorrência o Nº da CISU é digitado pelo operador
+            // (não vem do Chatwoot), então nunca é sobrescrito aqui.
+            if (isRecorrenciaAtiva()) return;
             document.getElementById('registro_cco').value = registroPorEtapa(etapa, chatwootRegistros);
         }
 
@@ -1325,6 +1360,7 @@
             document.getElementById('duracao').value = "00:00:00";
             atualizarCamposEtapa();
             togglePercentualField();
+            aplicarModoRecorrencia();
             const livres = document.getElementById('pontos_livres');
             if (livres) livres.value = '';
             montarBlocoPontosFormulario({ resetar: true });
@@ -1534,6 +1570,229 @@
             }
         }
 
+        // ==========================================================
+        // CISU DE RECORRÊNCIA (E-MAIL)
+        // Ocorrências que se repetem e NÃO criam chamado no Chatwoot —
+        // chegam por e-mail. O operador marca "CISU de Recorrência",
+        // escolhe na lista "Qual CISU de recorrência?" e o formulário é
+        // preenchido com as respostas fixas; o PDF sai no modelo padrão
+        // da ficha. Fonte: fichas ATDO 001 (registros 1529 a 1535.2026).
+        // Para atualizar/adicionar casos, edite a lista CISUS_RECORRENCIA:
+        //   unidade        = nome igual ao cadastro de Pontos de Entrega
+        //   horaInicio/Fim = horário típico (fim <= início vira dia seguinte)
+        // ==========================================================
+        const RECORRENCIA_LABEL = 'RECORRÊNCIA (E-MAIL)';
+
+        const CISUS_RECORRENCIA = [
+            { titulo: 'RECUPERAÇÃO DE NÍVEL — ETA RIACHUELO', subtitulo: 'Cidade de Riachuelo · Interrupção total · ficha 1529.2026', unidade: 'ETA RIACHUELO', cidade: 'CIDADE DE RIACHUELO', tipoOcorrencia: 'Parada total', percentual: '', especificacao: 'RECUPERAÇÃO DE NÍVEL A PEDIDO DA IGUÁ.', causa: 'RECUPERAÇÃO DE NÍVEL.', solicitante: 'IGUÁ', horaInicio: '20:00', horaFim: '05:00' },
+            { titulo: 'RECUPERAÇÃO DE NÍVEL — UD DIVINA PASTORA', subtitulo: 'Divina Pastora · Interrupção total · ficha 1530.2026', unidade: 'UD DIVINA PASTORA', cidade: 'DIVINA PASTORA', tipoOcorrencia: 'Parada total', percentual: '', especificacao: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO A PEDIDO DA IGUÁ.', causa: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO A PEDIDO DA IGUÁ.', solicitante: 'IGUÁ', horaInicio: '21:00', horaFim: '05:00' },
+            { titulo: 'RECUPERAÇÃO DE NÍVEL — UD GENERAL MAYNARD', subtitulo: 'General Maynard · Redução de 33% · ficha 1531.2026', unidade: 'UD GENERAL MAYNARD', cidade: 'GENERAL MAYNARD', tipoOcorrencia: 'Redução de Vazão', percentual: '33%', especificacao: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO A PEDIDO DA IGUÁ.', causa: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO A PEDIDO DA IGUÁ.', solicitante: 'IGUÁ', horaInicio: '21:00', horaFim: '05:00' },
+            { titulo: 'RECUPERAÇÃO DE NÍVEL — ETA SANTO AMARO', subtitulo: 'Santo Amaro das Brotas · Interrupção total · ficha 1532.2026', unidade: 'ETA STO AMARO BROTAS', cidade: 'CIDADE DE SANTO AMARO DAS BROTAS', tipoOcorrencia: 'Parada total', percentual: '', especificacao: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO.', causa: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO, A PEDIDO DA IGUÁ.', solicitante: 'IGUÁ', horaInicio: '23:00', horaFim: '04:00' },
+            { titulo: 'RECUPERAÇÃO DE NÍVEL — ETA SIRIRI', subtitulo: 'Cidade de Siriri · Interrupção total · ficha 1533.2026', unidade: 'ETA SIRIRI', cidade: 'CIDADE DE SIRIRI', tipoOcorrencia: 'Parada total', percentual: '', especificacao: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO.', causa: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO, A PEDIDO DA IGUÁ.', solicitante: 'IGUÁ', horaInicio: '00:01', horaFim: '04:00' },
+            { titulo: 'DISTRIBUIÇÃO REDUZIDA — UD MARUIM', subtitulo: 'Maruim · Redução de 50% · ficha 1534.2026', unidade: 'UD MARUIM', cidade: 'MARUIM', tipoOcorrencia: 'Redução de Vazão', percentual: '50%', especificacao: 'DISTRIBUIÇÃO REDUZIDA A PEDIDO DA IGUÁ PARA EVITAR EXTRAVASAMENTO', causa: 'DISTRIBUIÇÃO REDUZIDA A PEDIDO DA IGUÁ PARA EVITAR EXTRAVASAMENTO', solicitante: 'IGUÁ', horaInicio: '22:00', horaFim: '04:00' },
+            { titulo: 'EFICIÊNCIA ENERGÉTICA — ETA AREIA BRANCA', subtitulo: 'Areia Branca e Itabaiana · Redução de 20% · ficha 1535.2026', unidade: 'ETA AREIA BRANCA', cidade: 'AREIA BRANCA', tipoOcorrencia: 'Redução de Vazão', percentual: '20%', especificacao: 'CUMPRIR O CONTRATO DE EFICIÊNCIA ENERGÉTICA', causa: 'CUMPRIR O CONTRATO DE EFICIÊNCIA ENERGÉTICA', solicitante: 'DESO', horaInicio: '17:45', horaFim: '21:15' }
+        ];
+
+        function isRecorrenciaAtiva() {
+            const chk = document.getElementById('chk_recorrencia');
+            return !!(chk && chk.checked);
+        }
+
+        // Nº da CISU é essencial para a ficha (ex.: 1536.2026); no modo
+        // recorrência não existe registro no Chatwoot — o operador digita.
+        function validarRecorrencia() {
+            if (!isRecorrenciaAtiva()) return true;
+            if (!document.getElementById('registro_cco').value.trim()) {
+                alert('⛔ Informe o Nº da CISU de Recorrência no campo "Registro da CISU" (ex.: 1536.2026).');
+                document.getElementById('registro_cco').focus();
+                return false;
+            }
+            return true;
+        }
+
+        // Sugestão de próximo número sequencial (baseada nos registros desta sessão).
+        function sugerirRegistroRecorrencia() {
+            let melhor = null;
+            dbData.forEach(function (item) {
+                const m = /^(\d{1,4})\.(\d{4})$/.exec(String(item.registro_cco || '').trim());
+                if (!m) return;
+                const num = Number(m[1]);
+                const ano = Number(m[2]);
+                if (!melhor || num > melhor.num || (num === melhor.num && ano > melhor.ano)) melhor = { num: num, ano: ano };
+            });
+            if (!melhor) return '';
+            const anoAtual = new Date().getFullYear();
+            return (melhor.ano === anoAtual ? melhor.num + 1 : 1) + '.' + anoAtual;
+        }
+
+        function renderizarCasosRecorrencia() {
+            const grid = document.getElementById('rec_casos_grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            CISUS_RECORRENCIA.forEach(function (caso, i) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.dataset.recIdx = i;
+                btn.className = 'text-left p-3 rounded-lg border border-slate-300 bg-white hover:border-indigo-500 hover:bg-indigo-50 transition shadow-sm';
+                btn.innerHTML =
+                    '<p class="text-xs font-bold text-slate-900 leading-snug">[' + caso.solicitante + '] ' + caso.titulo + '</p>' +
+                    '<p class="text-[10px] text-slate-500 mt-1">' + caso.subtitulo + '</p>' +
+                    '<p class="text-[10px] font-bold text-indigo-700 mt-1">⏱ típico ' + caso.horaInicio + ' → ' + caso.horaFim + '</p>';
+                btn.onclick = function () { selecionarCasoRecorrencia(i); };
+                grid.appendChild(btn);
+            });
+        }
+
+        function destacarCasoRecorrencia(indice) {
+            const caso = CISUS_RECORRENCIA[indice];
+            if (!caso) return;
+            document.querySelectorAll('#rec_casos_grid button').forEach(function (btn) {
+                const ativo = Number(btn.dataset.recIdx) === indice;
+                btn.classList.toggle('ring-2', ativo);
+                btn.classList.toggle('ring-indigo-500', ativo);
+                btn.classList.toggle('border-indigo-500', ativo);
+                btn.classList.toggle('bg-indigo-100', ativo);
+            });
+            document.getElementById('rec_selecionado').classList.remove('hidden');
+            document.getElementById('rec_selecionado_titulo').textContent = 'Caso selecionado: ' + caso.titulo;
+            const [h1, m1] = caso.horaInicio.split(':').map(Number);
+            const [h2, m2] = caso.horaFim.split(':').map(Number);
+            const cruzaDia = (h2 * 60 + m2) <= (h1 * 60 + m1);
+            const chips = [
+                ['UNIDADE OPERACIONAL', caso.unidade],
+                ['CIDADE / LOCALIDADE', caso.cidade],
+                ['OCORRÊNCIA', caso.tipoOcorrencia + (caso.percentual ? ' (' + caso.percentual + ')' : '') + ' · Parada Programada'],
+                ['SOLICITANTE', caso.solicitante],
+                ['ESPECIFICAÇÃO', caso.especificacao || '—'],
+                ['HORÁRIO TÍPICO', caso.horaInicio + ' → ' + caso.horaFim + (cruzaDia ? ' (dia seguinte)' : '')]
+            ];
+            document.getElementById('rec_resumo_campos').innerHTML = chips.map(function (par) {
+                return '<div class="bg-slate-50 border border-slate-200 rounded p-2"><p class="text-[9px] font-bold text-slate-500 uppercase">' + par[0] + '</p><p class="text-[11px] font-bold text-slate-800 mt-0.5">' + par[1] + '</p></div>';
+            }).join('');
+            const status = document.getElementById('rec_status');
+            if (status) { status.textContent = ''; status.classList.add('hidden'); }
+        }
+
+        function limparSelecaoRecorrencia() {
+            document.querySelectorAll('#rec_casos_grid button').forEach(function (btn) {
+                btn.classList.remove('ring-2', 'ring-indigo-500', 'border-indigo-500', 'bg-indigo-100');
+            });
+            const sel = document.getElementById('rec_selecionado');
+            if (sel) sel.classList.add('hidden');
+        }
+
+        async function selecionarCasoRecorrencia(indice) {
+            const caso = CISUS_RECORRENCIA[indice];
+            if (!caso) return;
+            aplicarRespostasFixas(caso);
+            destacarCasoRecorrencia(indice);
+            if (!document.getElementById('registro_cco').value.trim()) {
+                alert('Caso aplicado no formulário!\n\nDigite o Nº da CISU de Recorrência no campo "Registro da CISU" (ex.: 1536.2026) e clique em "Gerar PDF da CISU".');
+                document.getElementById('registro_cco').focus();
+                return;
+            }
+            const ok = await generatePDFFromCurrentForm();
+            const status = document.getElementById('rec_status');
+            if (status) {
+                status.textContent = ok ? '✅ PDF gerado com as respostas fixas. Ajuste a Data/Hora Início e Fim (Bloco C) conforme o e-mail e gere novamente se necessário. Depois salve na planilha.' : '';
+                status.classList.toggle('hidden', !ok);
+            }
+        }
+
+        // Aplica as respostas fixas do caso escolhido (a única parte variável
+        // é a data/hora, que o operador ajusta conforme o e-mail recebido).
+        function aplicarRespostasFixas(caso) {
+            document.getElementById('tipo_intermitencia').value = 'Intermitência Programada';
+            document.getElementById('identificacao_ocorrencia').value = 'Parada Programada';
+            document.getElementById('tipo_ocorrencia').value = caso.tipoOcorrencia;
+            togglePercentualField();
+            document.getElementById('percentual_reducao').value = caso.percentual || '';
+            document.getElementById('especificacao').value = caso.especificacao || '';
+            document.getElementById('sistema_upstream').value = caso.unidade;
+
+            // Grade de Pontos de Entrega da unidade: todos marcados como
+            // AFETADOS (a lista atinge a cidade inteira; o operador pode ajustar).
+            montarBlocoPontosFormulario({ resetar: true });
+            marcarTodosPontos(true);
+
+            document.getElementById('cidade').value = caso.cidade;
+            document.getElementById('responsabilidade_operacional').value = caso.solicitante;
+            document.getElementById('causa_detalhada').value = caso.causa || caso.especificacao || '';
+            document.getElementById('fim_previsto_dt').value = '';
+            preencherEmissorLogado();
+
+            // Data/hora padrão: hoje com o horário típico do caso
+            // (fim menor ou igual ao início cai no dia seguinte).
+            const agora = new Date();
+            const [h1, m1] = caso.horaInicio.split(':').map(Number);
+            const [h2, m2] = caso.horaFim.split(':').map(Number);
+            const pad = (n) => String(n).padStart(2, '0');
+            const diaInicio = agora.getFullYear() + '-' + pad(agora.getMonth() + 1) + '-' + pad(agora.getDate());
+            const diaFim = new Date(agora);
+            if (h2 * 60 + m2 <= h1 * 60 + m1) diaFim.setDate(diaFim.getDate() + 1);
+            document.getElementById('inicio_dt').value = diaInicio + 'T' + caso.horaInicio;
+            document.getElementById('fim_dt').value = diaFim.getFullYear() + '-' + pad(diaFim.getMonth() + 1) + '-' + pad(diaFim.getDate()) + 'T' + caso.horaFim;
+            calcularDuracao();
+        }
+
+        // Liga/desliga o modo recorrência: esconde o Nº do Chatwoot, libera o
+        // Nº da CISU e a data/hora para digitação e mostra a box de casos.
+        function aplicarModoRecorrencia() {
+            const ativa = isRecorrenciaAtiva();
+            const box = document.getElementById('bloco_recorrencia');
+            if (box) box.classList.toggle('hidden', !ativa);
+
+            const chatwoot = document.getElementById('chatwoot_id');
+            const registro = document.getElementById('registro_cco');
+            const inicio = document.getElementById('inicio_dt');
+            const fim = document.getElementById('fim_dt');
+
+            if (ativa) {
+                // Limpa dados de um chamado anterior para não misturar registros.
+                chatwoot.value = '';
+                chatwoot.disabled = true;
+                chatwoot.removeAttribute('required');
+                chatwoot.placeholder = RECORRENCIA_LABEL + ' — sem chamado no Chatwoot';
+                registro.readOnly = false;
+                registro.classList.remove('bg-slate-100');
+                registro.placeholder = 'Ex: 1536.2026';
+                inicio.readOnly = false;
+                fim.readOnly = false;
+                document.getElementById('estagio').value = 'INICIAL';
+                chatwootRegistros = { abertura: '', fechamento: '' };
+                chatwootConclusaoMs = null;
+                registro.value = '';
+                document.getElementById('fim_previsto_dt').value = '';
+                limparFormularioRecorrencia();
+                registro.value = sugerirRegistroRecorrencia();
+                renderizarCasosRecorrencia();
+                limparSelecaoRecorrencia();
+            } else {
+                chatwoot.disabled = false;
+                chatwoot.setAttribute('required', 'true');
+                chatwoot.placeholder = 'Ex: 4521';
+                registro.readOnly = true;
+                registro.classList.add('bg-slate-100');
+                registro.placeholder = 'Preenchido automaticamente pelo Chatwoot';
+                inicio.readOnly = true;
+                fim.readOnly = true;
+                limparSelecaoRecorrencia();
+                atualizarCamposEtapa();
+            }
+        }
+
+        function limparFormularioRecorrencia() {
+            ['especificacao', 'sistema_upstream', 'cidade', 'responsabilidade_operacional', 'causa_detalhada', 'inicio_dt', 'fim_dt', 'fim_previsto_dt', 'percentual_reducao'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            document.getElementById('tipo_ocorrencia').value = '';
+            document.getElementById('duracao').value = '00:00:00';
+            togglePercentualField();
+            montarBlocoPontosFormulario({ resetar: true });
+            preencherEmissorLogado();
+        }
+
         // ==========================================
         // PROTÓTIPO: CRIAÇÃO DE RELATÓRIOS
         // ==========================================
@@ -1706,6 +1965,7 @@
 
             if (!validarLimite48h()) return;
             if (!validarCamposAutomaticos('salvar este registro na planilha')) return;
+            if (!validarRecorrencia()) return;
 
             const btnSave = document.getElementById('btnSave');
             const salvarBtnOriginal = btnSave.innerHTML;
@@ -1713,7 +1973,8 @@
             btnSave.innerText = "Enviando para Planilha...";
 
             const formData = {
-                chatwoot_id: document.getElementById('chatwoot_id').value,
+                chatwoot_id: isRecorrenciaAtiva() ? RECORRENCIA_LABEL : document.getElementById('chatwoot_id').value,
+                is_recorrencia: isRecorrenciaAtiva() ? 'true' : '',
                 registro_cco: document.getElementById('registro_cco').value,
                 estagio: document.getElementById('estagio').value,
                 data_emissao: document.getElementById('data_emissao').value,
@@ -1958,11 +2219,13 @@
             button.textContent = 'Gerando PDF...';
 
             try {
-                if (!validarLimite48h()) return;
-                if (!validarCamposAutomaticos('gerar o PDF da CISU')) return;
+                if (!validarLimite48h()) return false;
+                if (!validarCamposAutomaticos('gerar o PDF da CISU')) return false;
+                if (!validarRecorrencia()) return false;
 
                 const formData = {
-                    chatwoot_id: document.getElementById('chatwoot_id').value,
+                    chatwoot_id: isRecorrenciaAtiva() ? RECORRENCIA_LABEL : document.getElementById('chatwoot_id').value,
+                    is_recorrencia: isRecorrenciaAtiva() ? 'true' : '',
                     registro_cco: document.getElementById('registro_cco').value || "CISU",
                     estagio: document.getElementById('estagio').value,
                     data_emissao: document.getElementById('data_emissao').value,
@@ -1985,10 +2248,14 @@
 
                 populatePdfFields(formData);
                 await exportHtmlToPdf(formData.registro_cco);
-                clearForm();
+                // No modo recorrência o formulário permanece preenchido: o operador
+                // pode ajustar data/hora, regerar o PDF e salvar na planilha.
+                if (!isRecorrenciaAtiva()) clearForm();
+                return true;
             } catch (error) {
                 console.error('Erro ao gerar PDF CISU:', error);
                 alert('Não foi possível gerar o PDF. Verifique sua conexão com a internet e tente novamente. Os dados do formulário foram mantidos.');
+                return false;
             } finally {
                 button.innerHTML = originalLabel;
                 button.disabled = false;
@@ -2095,6 +2362,7 @@
             });
             montarBlocoPontosFormulario({ resetar: true });
             carregarPontosEntregaDaPlanilha();
+            renderizarCasosRecorrencia();
         });
     </script>
 </body>
