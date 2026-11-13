@@ -186,15 +186,15 @@
                     <div id="bloco_recorrencia" class="hidden bg-indigo-50 p-4 rounded-lg border-2 border-indigo-300 space-y-4">
                         <div>
                             <h3 class="text-sm font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-2"><span>🔁</span> Qual CISU de Recorrência? (chegou por e-mail)</h3>
-                            <p class="text-xs text-indigo-700 mt-1"><b>1)</b> Informe o <b>Nº da CISU de Recorrência</b> (número da ficha, em sequência). <b>2)</b> Escolha o caso que chegou no e-mail: as <b>respostas fixas</b> são aplicadas e o PDF é gerado no modelo padrão da ficha CISU. <b>3)</b> Ajuste apenas a <b>Data/Hora Início</b> e a <b>Data/Hora Fim</b> (editáveis no Bloco C) e gere novamente se precisar.</p>
+                            <p class="text-xs text-indigo-700 mt-1"><b>1)</b> Escolha o caso que chegou no e-mail: as <b>respostas fixas</b> são aplicadas e o PDF é gerado no modelo padrão da ficha CISU. <b>2)</b> Se quiser numerar a ficha (recomendado — a régua do acompanhamento numera cada CISU), informe o <b>Nº da CISU de Recorrência</b>: é sugerido automaticamente e a ficha é renumerada na hora. <b>3)</b> Ajuste apenas a <b>Data/Hora Início</b> e a <b>Data/Hora Fim</b> (editáveis no Bloco C) e gere novamente se precisar.</p>
                         </div>
                         <div id="rec_casos_grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2"></div>
                         <div class="bg-white p-3 rounded-lg border border-indigo-200 flex flex-col md:flex-row md:items-center gap-3">
                             <div class="flex-1 min-w-0">
-                                <label for="rec_registro_input" class="block text-xs font-bold text-indigo-900 mb-1">Nº da CISU de Recorrência * <span class="font-medium text-indigo-700 normal-case">(mesmo valor do campo "Registro da CISU" do Bloco A — sugerido automaticamente quando possível)</span></label>
+                                <label for="rec_registro_input" class="block text-xs font-bold text-indigo-900 mb-1">Nº da CISU de Recorrência (opcional) <span class="font-medium text-indigo-700 normal-case">(mesmo valor do campo "Registro da CISU" do Bloco A — sugerido automaticamente quando possível)</span></label>
                                 <input type="text" id="rec_registro_input" oninput="aoDigitarRegistroRecorrencia()" placeholder="Ex: 1536.2026" class="w-full md:w-72 text-sm p-2 border border-slate-300 rounded outline-none uppercase font-bold focus:ring-2 focus:ring-indigo-500">
                             </div>
-                            <p id="rec_registro_ajuda" class="hidden text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded p-2 md:max-w-xs">Informe o Nº da CISU acima para gerar o PDF (ex.: 1536.2026).</p>
+                            <p id="rec_registro_ajuda" class="hidden text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 md:max-w-xs">A ficha saiu SEM Nº — informe o Nº da CISU acima e gere novamente para numerá-la (ex.: 1536.2026).</p>
                         </div>
                         <div id="rec_selecionado" class="hidden bg-white p-3 rounded-lg border border-indigo-200 space-y-3">
                             <div class="flex items-start gap-2">
@@ -1605,26 +1605,10 @@
             return !!(chk && chk.checked);
         }
 
-        // Nº da CISU é essencial para a ficha (ex.: 1536.2026); no modo
-        // recorrência não existe registro no Chatwoot — o operador digita.
-        function validarRecorrencia() {
-            if (!isRecorrenciaAtiva()) return true;
-            if (!document.getElementById('registro_cco').value.trim()) {
-                // No modo recorrência o número fica na box de casos (espelha
-                // no "Registro da CISU" do Bloco A) — leva o operador até lá.
-                const box = document.getElementById('bloco_recorrencia');
-                const input = document.getElementById('rec_registro_input');
-                if (box && input) {
-                    if (typeof box.scrollIntoView === 'function') box.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    input.focus();
-                } else {
-                    document.getElementById('registro_cco').focus();
-                }
-                alert('⛔ Informe o Nº da CISU de Recorrência na box de recorrência (ex.: 1536.2026).');
-                return false;
-            }
-            return true;
-        }
+        // O Nº da CISU de Recorrência é OPCIONAL, igual ao fluxo normal
+        // ("Registro da CISU é opcional; quando existir, é preenchido
+        // automaticamente"): sem ele, a ficha sai sem REGISTRO Nº e a box
+        // apenas avisa — não bloqueia geração nem gravação.
 
         // Sugestão de próximo número sequencial: usa os registros desta sessão
         // e o último nº gravado no navegador (persiste entre dias).
@@ -1739,22 +1723,22 @@
             return ' ⚠️ ATENÇÃO: esse caso é de DIAS ÚTEIS e hoje é ' + (dow === 0 ? 'domingo' : 'sábado') + ' — conforme a régua do acompanhamento, no fim de semana NÃO precisa de CISU.';
         }
 
-        // Gera o PDF do caso selecionado; sem o Nº da CISU, mostra a dica
-        // inline na box (sem alerta bloqueante) e foca o campo.
+        // Gera o PDF do caso selecionado. O Nº da CISU é OPCIONAL, igual ao
+        // fluxo normal: sem número, a ficha sai sem REGISTRO Nº e a box
+        // apenas avisa — informe o nº e gere novamente para numerá-la.
         async function gerarPdfRecorrencia() {
-            const input = document.getElementById('rec_registro_input');
             const ajuda = document.getElementById('rec_registro_ajuda');
-            if (!document.getElementById('registro_cco').value.trim()) {
-                if (ajuda) ajuda.classList.remove('hidden');
-                if (input) input.focus();
-                return false;
-            }
-            if (ajuda) ajuda.classList.add('hidden');
+            const semNumero = !document.getElementById('registro_cco').value.trim();
+            if (ajuda) ajuda.classList.toggle('hidden', !semNumero);
             const ok = await generatePDFFromCurrentForm();
-            if (ok && isRecorrenciaAtiva()) registrarNumeroRecorrenciaUsado();
+            if (ok && isRecorrenciaAtiva() && !semNumero) registrarNumeroRecorrenciaUsado();
             const status = document.getElementById('rec_status');
             if (status) {
-                status.textContent = ok ? '✅ PDF gerado com as respostas fixas. Ajuste a Data/Hora Início e Fim (Bloco C) conforme o e-mail e gere novamente se necessário. Depois salve na planilha.' + avisoFimSemanaCaso(CISUS_RECORRENCIA[casoRecorrenciaAtivo]) : '';
+                status.textContent = ok
+                    ? '✅ PDF gerado com as respostas fixas.' +
+                      (semNumero ? ' ⚠️ A ficha saiu SEM Nº — informe o Nº da CISU de Recorrência acima e gere novamente para numerá-la.' : ' Ajuste a Data/Hora Início e Fim (Bloco C) conforme o e-mail e gere novamente se necessário. Depois salve na planilha.') +
+                      avisoFimSemanaCaso(CISUS_RECORRENCIA[casoRecorrenciaAtivo])
+                    : '';
                 status.classList.toggle('hidden', !ok);
             }
             return ok;
@@ -2046,7 +2030,6 @@
 
             if (!validarLimite48h()) return;
             if (!validarCamposAutomaticos('salvar este registro na planilha')) return;
-            if (!validarRecorrencia()) return;
 
             const btnSave = document.getElementById('btnSave');
             const salvarBtnOriginal = btnSave.innerHTML;
@@ -2304,7 +2287,6 @@
             try {
                 if (!validarLimite48h()) return false;
                 if (!validarCamposAutomaticos('gerar o PDF da CISU')) return false;
-                if (!validarRecorrencia()) return false;
 
                 const formData = {
                     chatwoot_id: isRecorrenciaAtiva() ? RECORRENCIA_LABEL : document.getElementById('chatwoot_id').value,
