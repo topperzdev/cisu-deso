@@ -19,6 +19,9 @@
         .pdf-title h2 { margin: 0; font-size: 15pt; line-height: 1.1; }
         .pdf-title p { margin: 1mm 0 0; color: #46566b; font-size: 8pt; font-weight: bold; }
         .pdf-title strong { display: inline-block; margin-top: 1mm; padding: 1mm 2mm; border-radius: 1mm; background: #075b9d; color: white; font-size: 7pt; }
+        .pdf-destinatarios { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3mm; margin: 0 0 3mm; padding: 1.5mm 2.5mm; border: 1px solid #c9d5e2; border-radius: 1.5mm; background: #f7f9fb; color: #17283d; font-size: 5.8pt; line-height: 1.3; }
+        .pdf-destinatarios strong { display: block; margin-bottom: 0.5mm; color: #075b9d; font-size: 6pt; }
+        .pdf-destinatarios div { overflow-wrap: anywhere; }
         .pdf-section { margin: 0 0 3mm; break-inside: avoid; }
         .pdf-section-title { display: flex; justify-content: space-between; gap: 4mm; margin-bottom: 2mm; padding: 2mm 2.5mm; border-left: 1.2mm solid #075b9d; background: #edf3f8; color: #075b9d; font-size: 8pt; font-weight: bold; }
         .pdf-section-note { color: #52647a; font-size: 6.5pt; font-weight: normal; text-align: right; }
@@ -458,6 +461,27 @@
 
             <div id="pdf_cancel_banner" class="pdf-cancel-banner pdf-hidden">REGISTRO CANCELADO</div>
             <div id="pdf_cancel_stamp" class="pdf-cancel-stamp pdf-hidden">CANCELADO</div>
+
+            <div class="pdf-destinatarios">
+                <div>
+                    <strong>CONCESSIONÁRIA (Iguá Saneamento)</strong>
+                    Ilmo. Senhor(a) Diretor(a) Geral<br>
+                    Iguá Sergipe S.A.<br>
+                    Rua Euclides Góis, 1120, Bairro Coroa do Meio &ndash; Aracaju/SE
+                </div>
+                <div>
+                    <strong>AGÊNCIA REGULADORA (AGRESE)</strong>
+                    Ilmo. Senhor(a) Diretor Presidente<br>
+                    Agência Reguladora de Serviços Públicos do Estado de Sergipe - AGRESE<br>
+                    Avenida Marieta Leite, 301, Bairro Grageru &ndash; Aracaju/SE
+                </div>
+                <div>
+                    <strong>PODER CONCEDENTE</strong>
+                    Ilmo. Senhor(a) Secretário de Estado<br>
+                    Secretaria de Estado do Desenvolvimento Urbano e Infraestrutura - SEDURBI<br>
+                    Rua Vila Cristina, 1051, Bairro São José &ndash; Aracaju/SE
+                </div>
+            </div>
 
             <section class="pdf-section">
                 <div class="pdf-section-title"><span>1. IDENTIFICAÇÃO</span></div>
