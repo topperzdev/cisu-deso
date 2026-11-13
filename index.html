@@ -186,9 +186,16 @@
                     <div id="bloco_recorrencia" class="hidden bg-indigo-50 p-4 rounded-lg border-2 border-indigo-300 space-y-4">
                         <div>
                             <h3 class="text-sm font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-2"><span>🔁</span> Qual CISU de Recorrência? (chegou por e-mail)</h3>
-                            <p class="text-xs text-indigo-700 mt-1">Escolha o caso abaixo: as <b>respostas fixas</b> são aplicadas no formulário e o PDF é gerado no modelo padrão da ficha CISU. Depois, ajuste apenas a <b>Data/Hora Início</b> e a <b>Data/Hora Fim</b> (editáveis no Bloco C) conforme o e-mail e gere novamente se precisar.</p>
+                            <p class="text-xs text-indigo-700 mt-1"><b>1)</b> Informe o <b>Nº da CISU de Recorrência</b> (número da ficha, em sequência). <b>2)</b> Escolha o caso que chegou no e-mail: as <b>respostas fixas</b> são aplicadas e o PDF é gerado no modelo padrão da ficha CISU. <b>3)</b> Ajuste apenas a <b>Data/Hora Início</b> e a <b>Data/Hora Fim</b> (editáveis no Bloco C) e gere novamente se precisar.</p>
                         </div>
                         <div id="rec_casos_grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2"></div>
+                        <div class="bg-white p-3 rounded-lg border border-indigo-200 flex flex-col md:flex-row md:items-center gap-3">
+                            <div class="flex-1 min-w-0">
+                                <label for="rec_registro_input" class="block text-xs font-bold text-indigo-900 mb-1">Nº da CISU de Recorrência * <span class="font-medium text-indigo-700 normal-case">(mesmo valor do campo "Registro da CISU" do Bloco A — sugerido automaticamente quando possível)</span></label>
+                                <input type="text" id="rec_registro_input" oninput="aoDigitarRegistroRecorrencia()" placeholder="Ex: 1536.2026" class="w-full md:w-72 text-sm p-2 border border-slate-300 rounded outline-none uppercase font-bold focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <p id="rec_registro_ajuda" class="hidden text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded p-2 md:max-w-xs">Informe o Nº da CISU acima para gerar o PDF (ex.: 1536.2026).</p>
+                        </div>
                         <div id="rec_selecionado" class="hidden bg-white p-3 rounded-lg border border-indigo-200 space-y-3">
                             <div class="flex items-start gap-2">
                                 <span class="text-lg leading-none mt-0.5">✅</span>
@@ -1584,13 +1591,13 @@
         const RECORRENCIA_LABEL = 'RECORRÊNCIA (E-MAIL)';
 
         const CISUS_RECORRENCIA = [
-            { titulo: 'RECUPERAÇÃO DE NÍVEL — ETA RIACHUELO', subtitulo: 'Cidade de Riachuelo · Interrupção total · ficha 1529.2026', unidade: 'ETA RIACHUELO', cidade: 'CIDADE DE RIACHUELO', tipoOcorrencia: 'Parada total', percentual: '', especificacao: 'RECUPERAÇÃO DE NÍVEL A PEDIDO DA IGUÁ.', causa: 'RECUPERAÇÃO DE NÍVEL.', solicitante: 'IGUÁ', horaInicio: '20:00', horaFim: '05:00' },
-            { titulo: 'RECUPERAÇÃO DE NÍVEL — UD DIVINA PASTORA', subtitulo: 'Divina Pastora · Interrupção total · ficha 1530.2026', unidade: 'UD DIVINA PASTORA', cidade: 'DIVINA PASTORA', tipoOcorrencia: 'Parada total', percentual: '', especificacao: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO A PEDIDO DA IGUÁ.', causa: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO A PEDIDO DA IGUÁ.', solicitante: 'IGUÁ', horaInicio: '21:00', horaFim: '05:00' },
-            { titulo: 'RECUPERAÇÃO DE NÍVEL — UD GENERAL MAYNARD', subtitulo: 'General Maynard · Redução de 33% · ficha 1531.2026', unidade: 'UD GENERAL MAYNARD', cidade: 'GENERAL MAYNARD', tipoOcorrencia: 'Redução de Vazão', percentual: '33%', especificacao: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO A PEDIDO DA IGUÁ.', causa: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO A PEDIDO DA IGUÁ.', solicitante: 'IGUÁ', horaInicio: '21:00', horaFim: '05:00' },
-            { titulo: 'RECUPERAÇÃO DE NÍVEL — ETA SANTO AMARO', subtitulo: 'Santo Amaro das Brotas · Interrupção total · ficha 1532.2026', unidade: 'ETA STO AMARO BROTAS', cidade: 'CIDADE DE SANTO AMARO DAS BROTAS', tipoOcorrencia: 'Parada total', percentual: '', especificacao: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO.', causa: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO, A PEDIDO DA IGUÁ.', solicitante: 'IGUÁ', horaInicio: '23:00', horaFim: '04:00' },
-            { titulo: 'RECUPERAÇÃO DE NÍVEL — ETA SIRIRI', subtitulo: 'Cidade de Siriri · Interrupção total · ficha 1533.2026', unidade: 'ETA SIRIRI', cidade: 'CIDADE DE SIRIRI', tipoOcorrencia: 'Parada total', percentual: '', especificacao: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO.', causa: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO, A PEDIDO DA IGUÁ.', solicitante: 'IGUÁ', horaInicio: '00:01', horaFim: '04:00' },
-            { titulo: 'DISTRIBUIÇÃO REDUZIDA — UD MARUIM', subtitulo: 'Maruim · Redução de 50% · ficha 1534.2026', unidade: 'UD MARUIM', cidade: 'MARUIM', tipoOcorrencia: 'Redução de Vazão', percentual: '50%', especificacao: 'DISTRIBUIÇÃO REDUZIDA A PEDIDO DA IGUÁ PARA EVITAR EXTRAVASAMENTO', causa: 'DISTRIBUIÇÃO REDUZIDA A PEDIDO DA IGUÁ PARA EVITAR EXTRAVASAMENTO', solicitante: 'IGUÁ', horaInicio: '22:00', horaFim: '04:00' },
-            { titulo: 'EFICIÊNCIA ENERGÉTICA — ETA AREIA BRANCA', subtitulo: 'Areia Branca e Itabaiana · Redução de 20% · ficha 1535.2026', unidade: 'ETA AREIA BRANCA', cidade: 'AREIA BRANCA', tipoOcorrencia: 'Redução de Vazão', percentual: '20%', especificacao: 'CUMPRIR O CONTRATO DE EFICIÊNCIA ENERGÉTICA', causa: 'CUMPRIR O CONTRATO DE EFICIÊNCIA ENERGÉTICA', solicitante: 'DESO', horaInicio: '17:45', horaFim: '21:15' }
+            { titulo: 'DISTRIBUIÇÃO SUSPENSA NA ETA RIACHUELO', subtitulo: 'Cidade de Riachuelo · Interrupção total · ficha 1529.2026', unidade: 'ETA RIACHUELO', cidade: 'CIDADE DE RIACHUELO', tipoOcorrencia: 'Parada total', percentual: '', especificacao: 'RECUPERAÇÃO DE NÍVEL A PEDIDO DA IGUÁ.', causa: 'RECUPERAÇÃO DE NÍVEL.', solicitante: 'IGUÁ', horaInicio: '20:00', horaFim: '05:00', frequencia: 'DIÁRIA', diasUteis: false },
+            { titulo: 'PARADA DIÁRIA NOTURNA NA UD FONTE DOS PADRES (DIVINA PASTORA)', subtitulo: 'Divina Pastora · Interrupção total · ficha 1530.2026', unidade: 'UD FONTE PADRES', cidade: 'DIVINA PASTORA', tipoOcorrencia: 'Parada total', percentual: '', especificacao: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO A PEDIDO DA IGUÁ.', causa: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO A PEDIDO DA IGUÁ.', solicitante: 'IGUÁ', horaInicio: '21:00', horaFim: '05:00', frequencia: 'DIÁRIA', diasUteis: false },
+            { titulo: 'PARADA DIÁRIA NOTURNA NO POÇO 2 — GENERAL MAYNARD', subtitulo: 'General Maynard · Redução de 33% · ficha 1531.2026', unidade: 'UD GENERAL MAYNARD', cidade: 'GENERAL MAYNARD', tipoOcorrencia: 'Redução de Vazão', percentual: '33%', especificacao: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO A PEDIDO DA IGUÁ.', causa: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO A PEDIDO DA IGUÁ.', solicitante: 'IGUÁ', horaInicio: '21:00', horaFim: '05:00', frequencia: 'DIÁRIA', diasUteis: false },
+            { titulo: 'DISTRIBUIÇÃO SUSPENSA NA ETA SANTO AMARO DAS BROTAS', subtitulo: 'Santo Amaro das Brotas · Interrupção total · ficha 1532.2026', unidade: 'ETA STO AMARO BROTAS', cidade: 'CIDADE DE SANTO AMARO DAS BROTAS', tipoOcorrencia: 'Parada total', percentual: '', especificacao: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO.', causa: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO, A PEDIDO DA IGUÁ.', solicitante: 'IGUÁ', horaInicio: '23:00', horaFim: '05:00', frequencia: 'DIÁRIA', diasUteis: false },
+            { titulo: 'DISTRIBUIÇÃO NOTURNA SUSPENSA NA ETA SIRIRI', subtitulo: 'Cidade de Siriri · Interrupção total · ficha 1533.2026', unidade: 'ETA SIRIRI', cidade: 'CIDADE DE SIRIRI', tipoOcorrencia: 'Parada total', percentual: '', especificacao: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO.', causa: 'RECUPERAÇÃO DE NÍVEL DO RESERVATÓRIO, A PEDIDO DA IGUÁ.', solicitante: 'IGUÁ', horaInicio: '00:00', horaFim: '04:00', frequencia: 'DIÁRIA', diasUteis: false },
+            { titulo: 'REDUÇÃO DE 50% NA DISTRIBUIÇÃO — DESLIGAMENTO DE 1 BOMBA DO LACHEZ (UD MARUIM)', subtitulo: 'Maruim · Redução de 50% · ficha 1534.2026', unidade: 'UD MARUIM', cidade: 'MARUIM', tipoOcorrencia: 'Redução de Vazão', percentual: '50%', especificacao: 'DISTRIBUIÇÃO REDUZIDA A PEDIDO DA IGUÁ PARA EVITAR EXTRAVASAMENTO', causa: 'DISTRIBUIÇÃO REDUZIDA A PEDIDO DA IGUÁ PARA EVITAR EXTRAVASAMENTO', solicitante: 'IGUÁ', horaInicio: '22:00', horaFim: '04:00', frequencia: 'DIÁRIA', diasUteis: false },
+            { titulo: 'REDUÇÃO DE ~20% — EFICIÊNCIA ENERGÉTICA (ETA AREIA BRANCA)', subtitulo: 'Areia Branca e Itabaiana · Redução de 20% · ficha 1535.2026', unidade: 'ETA AREIA BRANCA', cidade: 'AREIA BRANCA', tipoOcorrencia: 'Redução de Vazão', percentual: '20%', especificacao: 'CUMPRIR O CONTRATO DE EFICIÊNCIA ENERGÉTICA', causa: 'CUMPRIR O CONTRATO DE EFICIÊNCIA ENERGÉTICA', solicitante: 'DESO', horaInicio: '17:45', horaFim: '21:12', frequencia: 'DIAS ÚTEIS', diasUteis: true }
         ];
 
         function isRecorrenciaAtiva() {
@@ -1603,26 +1610,51 @@
         function validarRecorrencia() {
             if (!isRecorrenciaAtiva()) return true;
             if (!document.getElementById('registro_cco').value.trim()) {
-                alert('⛔ Informe o Nº da CISU de Recorrência no campo "Registro da CISU" (ex.: 1536.2026).');
-                document.getElementById('registro_cco').focus();
+                // No modo recorrência o número fica na box de casos (espelha
+                // no "Registro da CISU" do Bloco A) — leva o operador até lá.
+                const box = document.getElementById('bloco_recorrencia');
+                const input = document.getElementById('rec_registro_input');
+                if (box && input) {
+                    if (typeof box.scrollIntoView === 'function') box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    input.focus();
+                } else {
+                    document.getElementById('registro_cco').focus();
+                }
+                alert('⛔ Informe o Nº da CISU de Recorrência na box de recorrência (ex.: 1536.2026).');
                 return false;
             }
             return true;
         }
 
-        // Sugestão de próximo número sequencial (baseada nos registros desta sessão).
+        // Sugestão de próximo número sequencial: usa os registros desta sessão
+        // e o último nº gravado no navegador (persiste entre dias).
         function sugerirRegistroRecorrencia() {
             let melhor = null;
+            const considerar = function (num, ano) {
+                num = Number(num); ano = Number(ano);
+                if (!num || !ano) return;
+                if (!melhor || num > melhor.num || (num === melhor.num && ano > melhor.ano)) melhor = { num: num, ano: ano };
+            };
             dbData.forEach(function (item) {
                 const m = /^(\d{1,4})\.(\d{4})$/.exec(String(item.registro_cco || '').trim());
-                if (!m) return;
-                const num = Number(m[1]);
-                const ano = Number(m[2]);
-                if (!melhor || num > melhor.num || (num === melhor.num && ano > melhor.ano)) melhor = { num: num, ano: ano };
+                if (m) considerar(m[1], m[2]);
             });
+            try {
+                const salvo = JSON.parse(localStorage.getItem('cisu_ultimo_registro_rec') || 'null');
+                if (salvo) considerar(salvo.num, salvo.ano);
+            } catch (e) { /* localStorage indisponível: segue só com a sessão */ }
             if (!melhor) return '';
             const anoAtual = new Date().getFullYear();
             return (melhor.ano === anoAtual ? melhor.num + 1 : 1) + '.' + anoAtual;
+        }
+
+        // Guarda o último nº usado para sugerir o próximo na próxima abertura.
+        function registrarNumeroRecorrenciaUsado() {
+            const m = /^(\d{1,4})\.(\d{4})$/.exec(String(document.getElementById('registro_cco').value || '').trim());
+            if (!m) return;
+            try {
+                localStorage.setItem('cisu_ultimo_registro_rec', JSON.stringify({ num: Number(m[1]), ano: Number(m[2]) }));
+            } catch (e) { /* segue sem persistir */ }
         }
 
         function renderizarCasosRecorrencia() {
@@ -1637,7 +1669,7 @@
                 btn.innerHTML =
                     '<p class="text-xs font-bold text-slate-900 leading-snug">[' + caso.solicitante + '] ' + caso.titulo + '</p>' +
                     '<p class="text-[10px] text-slate-500 mt-1">' + caso.subtitulo + '</p>' +
-                    '<p class="text-[10px] font-bold text-indigo-700 mt-1">⏱ típico ' + caso.horaInicio + ' → ' + caso.horaFim + '</p>';
+                    '<p class="text-[10px] font-bold text-indigo-700 mt-1">⏱ típico ' + caso.horaInicio + ' → ' + caso.horaFim + (caso.frequencia ? ' · 📅 ' + caso.frequencia : '') + '</p>';
                 btn.onclick = function () { selecionarCasoRecorrencia(i); };
                 grid.appendChild(btn);
             });
@@ -1646,6 +1678,9 @@
         function destacarCasoRecorrencia(indice) {
             const caso = CISUS_RECORRENCIA[indice];
             if (!caso) return;
+            casoRecorrenciaAtivo = indice;
+            const inputRec = document.getElementById('rec_registro_input');
+            if (inputRec && !inputRec.value.trim()) inputRec.value = document.getElementById('registro_cco').value;
             document.querySelectorAll('#rec_casos_grid button').forEach(function (btn) {
                 const ativo = Number(btn.dataset.recIdx) === indice;
                 btn.classList.toggle('ring-2', ativo);
@@ -1664,7 +1699,8 @@
                 ['OCORRÊNCIA', caso.tipoOcorrencia + (caso.percentual ? ' (' + caso.percentual + ')' : '') + ' · Parada Programada'],
                 ['SOLICITANTE', caso.solicitante],
                 ['ESPECIFICAÇÃO', caso.especificacao || '—'],
-                ['HORÁRIO TÍPICO', caso.horaInicio + ' → ' + caso.horaFim + (cruzaDia ? ' (dia seguinte)' : '')]
+                ['HORÁRIO TÍPICO', caso.horaInicio + ' → ' + caso.horaFim + (cruzaDia ? ' (dia seguinte)' : '')],
+                ['FREQUÊNCIA', caso.frequencia || 'DIÁRIA']
             ];
             document.getElementById('rec_resumo_campos').innerHTML = chips.map(function (par) {
                 return '<div class="bg-slate-50 border border-slate-200 rounded p-2"><p class="text-[9px] font-bold text-slate-500 uppercase">' + par[0] + '</p><p class="text-[11px] font-bold text-slate-800 mt-0.5">' + par[1] + '</p></div>';
@@ -1674,6 +1710,7 @@
         }
 
         function limparSelecaoRecorrencia() {
+            casoRecorrenciaAtivo = null;
             document.querySelectorAll('#rec_casos_grid button').forEach(function (btn) {
                 btn.classList.remove('ring-2', 'ring-indigo-500', 'border-indigo-500', 'bg-indigo-100');
             });
@@ -1681,21 +1718,59 @@
             if (sel) sel.classList.add('hidden');
         }
 
+        // Índice do caso atualmente selecionado na box de recorrência.
+        let casoRecorrenciaAtivo = null;
+
         async function selecionarCasoRecorrencia(indice) {
             const caso = CISUS_RECORRENCIA[indice];
             if (!caso) return;
             aplicarRespostasFixas(caso);
             destacarCasoRecorrencia(indice);
+            await gerarPdfRecorrencia();
+        }
+
+        // O caso de dias úteis (Eficiência Energética) não roda no fim de
+        // semana: na régua do acompanhamento consta "Não precisa de CISU".
+        function avisoFimSemanaCaso(caso, data) {
+            if (!caso || !caso.diasUteis) return '';
+            const dia = data || new Date();
+            const dow = dia.getDay(); // 0 = domingo, 6 = sábado
+            if (dow !== 0 && dow !== 6) return '';
+            return ' ⚠️ ATENÇÃO: esse caso é de DIAS ÚTEIS e hoje é ' + (dow === 0 ? 'domingo' : 'sábado') + ' — conforme a régua do acompanhamento, no fim de semana NÃO precisa de CISU.';
+        }
+
+        // Gera o PDF do caso selecionado; sem o Nº da CISU, mostra a dica
+        // inline na box (sem alerta bloqueante) e foca o campo.
+        async function gerarPdfRecorrencia() {
+            const input = document.getElementById('rec_registro_input');
+            const ajuda = document.getElementById('rec_registro_ajuda');
             if (!document.getElementById('registro_cco').value.trim()) {
-                alert('Caso aplicado no formulário!\n\nDigite o Nº da CISU de Recorrência no campo "Registro da CISU" (ex.: 1536.2026) e clique em "Gerar PDF da CISU".');
-                document.getElementById('registro_cco').focus();
-                return;
+                if (ajuda) ajuda.classList.remove('hidden');
+                if (input) input.focus();
+                return false;
             }
+            if (ajuda) ajuda.classList.add('hidden');
             const ok = await generatePDFFromCurrentForm();
+            if (ok && isRecorrenciaAtiva()) registrarNumeroRecorrenciaUsado();
             const status = document.getElementById('rec_status');
             if (status) {
-                status.textContent = ok ? '✅ PDF gerado com as respostas fixas. Ajuste a Data/Hora Início e Fim (Bloco C) conforme o e-mail e gere novamente se necessário. Depois salve na planilha.' : '';
+                status.textContent = ok ? '✅ PDF gerado com as respostas fixas. Ajuste a Data/Hora Início e Fim (Bloco C) conforme o e-mail e gere novamente se necessário. Depois salve na planilha.' + avisoFimSemanaCaso(CISUS_RECORRENCIA[casoRecorrenciaAtivo]) : '';
                 status.classList.toggle('hidden', !ok);
+            }
+            return ok;
+        }
+
+        // Digitação do Nº da CISU na box: espelha no campo "Registro da CISU"
+        // do Bloco A e, com o caso já escolhido e o número completo
+        // (ex.: 1536.2026), gera o PDF automaticamente.
+        function aoDigitarRegistroRecorrencia() {
+            const input = document.getElementById('rec_registro_input');
+            const valor = String(input && input.value || '').trim().toUpperCase();
+            document.getElementById('registro_cco').value = valor;
+            const ajuda = document.getElementById('rec_registro_ajuda');
+            if (ajuda) ajuda.classList.add('hidden');
+            if (casoRecorrenciaAtivo !== null && /^\d{1,4}\.\d{4}$/.test(valor)) {
+                gerarPdfRecorrencia();
             }
         }
 
@@ -1765,6 +1840,10 @@
                 document.getElementById('fim_previsto_dt').value = '';
                 limparFormularioRecorrencia();
                 registro.value = sugerirRegistroRecorrencia();
+                const inputRec = document.getElementById('rec_registro_input');
+                if (inputRec) inputRec.value = registro.value;
+                const ajudaRec = document.getElementById('rec_registro_ajuda');
+                if (ajudaRec) ajudaRec.classList.add('hidden');
                 renderizarCasosRecorrencia();
                 limparSelecaoRecorrencia();
             } else {
@@ -1776,6 +1855,8 @@
                 registro.placeholder = 'Preenchido automaticamente pelo Chatwoot';
                 inicio.readOnly = true;
                 fim.readOnly = true;
+                const inputRecOff = document.getElementById('rec_registro_input');
+                if (inputRecOff) inputRecOff.value = '';
                 limparSelecaoRecorrencia();
                 atualizarCamposEtapa();
             }
@@ -2057,6 +2138,8 @@
             }
 
             alert("✅ Registro gravado com sucesso na Planilha do Google Sheets!");
+
+            if (isRecorrenciaAtiva()) registrarNumeroRecorrenciaUsado();
 
             dbData.unshift({ id: Date.now(), ...formData });
             renderTable();
