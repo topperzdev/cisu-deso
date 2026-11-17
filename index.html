@@ -148,10 +148,10 @@
                         <h3 class="text-sm font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2"><span>🔗</span> Rastreamento e Conexão de Protocolos</h3>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Nº Protocolo / Chamado *</label>
+                                <label id="lbl_protocolo" class="block text-xs font-bold text-slate-700 mb-1">Nº Protocolo / Chamado *</label>
                                 <div class="flex gap-2">
                                     <input type="text" id="chatwoot_id" required placeholder="Ex: 4521" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
-                                    <button type="button" onclick="buscarDadosChatwoot()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-2 rounded text-xs shadow transition flex items-center justify-center" title="Buscar no Chatwoot">
+                                    <button type="button" id="btn_buscar_chatwoot" onclick="buscarDadosChatwoot()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-2 rounded text-xs shadow transition flex items-center justify-center" title="Buscar no Chatwoot">
                                         🔍 Buscar
                                     </button>
                                 </div>
@@ -252,7 +252,7 @@
 
                             <div class="md:col-span-3">
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Tipo de Serviço</label>
-                                <input type="text" id="especificacao" readonly placeholder="Preenchido automaticamente pelo Chatwoot" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase">
+                                <input type="text" id="especificacao" readonly tabindex="-1" placeholder="Preenchido automaticamente pelo Chatwoot" class="w-full text-sm p-2 border border-slate-300 rounded outline-none uppercase bg-slate-100 cursor-not-allowed">
                             </div>
                         </div>
                     </div>
@@ -1341,7 +1341,8 @@
                 : (etapa === 'CANCELADO' ? 'Data e Hora do Cancelamento *' : 'Data e Hora Previsão Fin. *');
             // No modo recorrência o Nº da CISU é digitado pelo operador
             // (não vem do Chatwoot), então nunca é sobrescrito aqui.
-            if (isRecorrenciaAtiva()) return;
+            // O campo de protocolo/chamado só abre no FECHAMENTO.
+            if (isRecorrenciaAtiva()) { atualizarProtocoloRecorrencia(); return; }
             document.getElementById('registro_cco').value = registroPorEtapa(etapa, chatwootRegistros);
         }
 
@@ -1727,6 +1728,20 @@
         // fluxo normal: sem número, a ficha sai sem REGISTRO Nº e a box
         // apenas avisa — informe o nº e gere novamente para numerá-la.
         async function gerarPdfRecorrencia() {
+            if (!protocoloRecorrenciaOk()) {
+                const st = document.getElementById('rec_status');
+                if (st) {
+                    st.textContent = '⚠️ FECHAMENTO: informe o Nº do protocolo/chamado (Bloco A) e clique em "Gerar PDF da CISU".';
+                    st.classList.remove('hidden', 'text-emerald-700', 'bg-emerald-50', 'border-emerald-200');
+                    st.classList.add('text-amber-700', 'bg-amber-50', 'border-amber-200');
+                }
+                return false;
+            }
+            const stOk = document.getElementById('rec_status');
+            if (stOk) {
+                stOk.classList.remove('text-amber-700', 'bg-amber-50', 'border-amber-200');
+                stOk.classList.add('text-emerald-700', 'bg-emerald-50', 'border-emerald-200');
+            }
             const ajuda = document.getElementById('rec_registro_ajuda');
             const semNumero = !document.getElementById('registro_cco').value.trim();
             if (ajuda) ajuda.classList.toggle('hidden', !semNumero);
@@ -1818,6 +1833,7 @@
                 inicio.readOnly = false;
                 fim.readOnly = false;
                 document.getElementById('estagio').value = 'INICIAL';
+                atualizarProtocoloRecorrencia();
                 chatwootRegistros = { abertura: '', fechamento: '' };
                 chatwootConclusaoMs = null;
                 registro.value = '';
@@ -1834,6 +1850,10 @@
                 chatwoot.disabled = false;
                 chatwoot.setAttribute('required', 'true');
                 chatwoot.placeholder = 'Ex: 4521';
+                const lblProt = document.getElementById('lbl_protocolo');
+                if (lblProt) lblProt.textContent = 'Nº Protocolo / Chamado *';
+                const btnBusca = document.getElementById('btn_buscar_chatwoot');
+                if (btnBusca) { btnBusca.disabled = false; btnBusca.classList.remove('opacity-50', 'cursor-not-allowed'); }
                 registro.readOnly = true;
                 registro.classList.add('bg-slate-100');
                 registro.placeholder = 'Preenchido automaticamente pelo Chatwoot';
@@ -1844,6 +1864,53 @@
                 limparSelecaoRecorrencia();
                 atualizarCamposEtapa();
             }
+        }
+
+        // ----- Protocolo/chamado na CISU de Recorrência -----
+        // Na ABERTURA (INICIAL) não existe protocolo: o campo fica travado.
+        // No FECHAMENTO (FINAL) o campo abre e passa a ser obrigatório.
+        function atualizarProtocoloRecorrencia() {
+            if (!isRecorrenciaAtiva()) return;
+            const chatwoot = document.getElementById('chatwoot_id');
+            const lbl = document.getElementById('lbl_protocolo');
+            const btnBusca = document.getElementById('btn_buscar_chatwoot');
+            const fechamento = document.getElementById('estagio').value === 'FINAL';
+            if (fechamento) {
+                chatwoot.disabled = false;
+                chatwoot.setAttribute('required', 'true');
+                chatwoot.placeholder = 'Nº do protocolo/chamado (obrigatório)';
+                if (lbl) lbl.textContent = 'Nº Protocolo / Chamado * (obrigatório no fechamento)';
+            } else {
+                chatwoot.value = '';
+                chatwoot.disabled = true;
+                chatwoot.removeAttribute('required');
+                chatwoot.placeholder = RECORRENCIA_LABEL + ' — sem chamado no Chatwoot';
+                if (lbl) lbl.textContent = 'Nº Protocolo / Chamado (não há na abertura)';
+            }
+            // A busca no Chatwoot não se aplica à recorrência (não há chamado lá).
+            if (btnBusca) { btnBusca.disabled = true; btnBusca.classList.add('opacity-50', 'cursor-not-allowed'); }
+        }
+
+        function protocoloRecorrenciaOk() {
+            if (!isRecorrenciaAtiva()) return true;
+            if (document.getElementById('estagio').value !== 'FINAL') return true;
+            return !!document.getElementById('chatwoot_id').value.trim();
+        }
+
+        function validarProtocoloRecorrencia(acao) {
+            if (protocoloRecorrenciaOk()) return true;
+            alert('⛔ Não é possível ' + acao + '.\nNo FECHAMENTO da CISU de Recorrência o Nº do protocolo/chamado é obrigatório.');
+            const el = document.getElementById('chatwoot_id');
+            if (el) el.focus();
+            return false;
+        }
+
+        // Valor enviado como chamado: na recorrência usa o protocolo (quando
+        // informado no fechamento); sem ele, mantém o rótulo de recorrência.
+        function valorChatwootId() {
+            const bruto = document.getElementById('chatwoot_id').value;
+            if (!isRecorrenciaAtiva()) return bruto;
+            return bruto.trim() || RECORRENCIA_LABEL;
         }
 
         function limparFormularioRecorrencia() {
@@ -1993,6 +2060,7 @@
         // Validações de criação da CISU: (1) campos automáticos obrigatórios;
         // (2) limite de 48h após a finalização do chamado.
         function validarCamposAutomaticos(acao) {
+            if (!validarProtocoloRecorrencia(acao)) return false;
             const faltando = [];
             // Registro da CISU é opcional; quando existir, é preenchido automaticamente.
             if (!document.getElementById('data_emissao').value) faltando.push('Data do Registro');
@@ -2037,7 +2105,7 @@
             btnSave.innerText = "Enviando para Planilha...";
 
             const formData = {
-                chatwoot_id: isRecorrenciaAtiva() ? RECORRENCIA_LABEL : document.getElementById('chatwoot_id').value,
+                chatwoot_id: valorChatwootId(),
                 is_recorrencia: isRecorrenciaAtiva() ? 'true' : '',
                 registro_cco: document.getElementById('registro_cco').value,
                 estagio: document.getElementById('estagio').value,
@@ -2289,7 +2357,7 @@
                 if (!validarCamposAutomaticos('gerar o PDF da CISU')) return false;
 
                 const formData = {
-                    chatwoot_id: isRecorrenciaAtiva() ? RECORRENCIA_LABEL : document.getElementById('chatwoot_id').value,
+                    chatwoot_id: valorChatwootId(),
                     is_recorrencia: isRecorrenciaAtiva() ? 'true' : '',
                     registro_cco: document.getElementById('registro_cco').value || "CISU",
                     estagio: document.getElementById('estagio').value,
