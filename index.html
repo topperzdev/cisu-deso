@@ -2020,12 +2020,22 @@
                     dataIni.split('-').reverse().join('/') + ' a ' + dataFim.split('-').reverse().join('/');
                 document.getElementById('auditReportResult').classList.remove('hidden');
                 document.getElementById('btnAuditCsv').disabled = !relatorioAuditoriaAtual.rows.length;
-                mostrarStatusRelatorios(
-                    relatorioAuditoriaAtual.truncado
-                        ? 'Análise concluída, mas um dos blocos atingiu o limite de páginas. O resultado pode estar incompleto.'
-                        : 'Análise Auditoria concluída. As regras foram reproduzidas da consulta do banco de dados.',
-                    relatorioAuditoriaAtual.truncado ? 'erro' : 'sucesso'
-                );
+                const diagnostico = result.diagnostico || {};
+                const semAtributos = Number(diagnostico.conversas_sem_atributos_auditoria || 0);
+                const detalhes = Number(diagnostico.detalhes_individuais_consultados || 0);
+                if (relatorioAuditoriaAtual.truncado) {
+                    mostrarStatusRelatorios('Análise parcial: um dos blocos atingiu o limite de páginas. O resultado pode estar incompleto.', 'erro');
+                } else if (semAtributos > 0) {
+                    mostrarStatusRelatorios(
+                        'Atenção: ' + semAtributos + ' conversa(s) ainda vieram sem os atributos necessários, mesmo após consultar ' + detalhes + ' detalhe(s). O resultado não pode ser considerado equivalente ao banco até esses dados serem recuperados.',
+                        'erro'
+                    );
+                } else {
+                    mostrarStatusRelatorios(
+                        'Análise concluída. ' + detalhes + ' detalhe(s) individual(is) foram consultados para completar os atributos antes da aplicação das regras.',
+                        'sucesso'
+                    );
+                }
             } catch (e) {
                 mostrarStatusRelatorios('Não foi possível gerar a Análise Auditoria: ' + e.message, 'erro');
             } finally {
