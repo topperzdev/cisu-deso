@@ -446,25 +446,6 @@
                     </div>
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-                        <div class="rounded-xl border-2 border-blue-200 bg-blue-50/40 p-5 lg:col-span-2">
-                            <div class="flex items-center gap-2 mb-2"><span class="text-2xl">🔎</span><h3 class="font-bold text-slate-900">Análise Auditoria</h3></div>
-                            <p class="text-sm text-slate-600 mb-4">Consulta os chamados no Chatwoot e aplica automaticamente as mesmas regras da consulta “Consulta Análise Auditoria” do banco de dados. Não é necessário editar SQL.</p>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl">
-                                <div>
-                                    <label for="auditDateStart" class="block text-xs font-bold text-slate-700 mb-1">Data inicial</label>
-                                    <input id="auditDateStart" type="date" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white">
-                                </div>
-                                <div>
-                                    <label for="auditDateEnd" class="block text-xs font-bold text-slate-700 mb-1">Data final</label>
-                                    <input id="auditDateEnd" type="date" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white">
-                                </div>
-                            </div>
-                            <div class="flex flex-wrap gap-2 mt-4">
-                                <button type="button" onclick="gerarAnaliseAuditoriaUI()" id="btnAuditRun" class="bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-bold px-5 py-2.5 rounded-lg">Executar análise</button>
-                                <button type="button" onclick="baixarAnaliseAuditoriaCSV()" id="btnAuditCsv" disabled class="bg-slate-700 hover:bg-slate-800 disabled:opacity-40 text-white font-bold px-5 py-2.5 rounded-lg">Baixar CSV</button>
-                            </div>
-                            <p class="text-xs text-slate-500 mt-3">Limite de período: 366 dias. A consulta considera a data de criação do chamado no Chatwoot, como no SQL do banco.</p>
-                        </div>
                         <div class="rounded-xl border border-slate-200 p-5">
                             <div class="flex items-center gap-2 mb-2"><span class="text-2xl">🕗</span><h3 class="font-bold text-slate-900">Relatório diário de plantão</h3></div>
                             <p class="text-sm text-slate-500 mb-4">Gera o resumo das ocorrências entre 08h da data selecionada e 08h do dia seguinte.</p>
@@ -494,16 +475,6 @@
 
                 <div id="reportStatus" class="hidden rounded-lg p-4 text-sm border" role="status" aria-live="polite"></div>
 
-
-                <div id="auditReportResult" class="hidden bg-white rounded-xl shadow-md p-6 border border-slate-200">
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                        <div>
-                            <h3 class="font-bold text-lg text-slate-900">Resultado da Análise Auditoria</h3>
-                            <p id="auditReportMeta" class="text-xs text-slate-500 mt-1"></p>
-                        </div>
-                    </div>
-                    <div id="auditReportTableWrap" class="overflow-x-auto"></div>
-                </div>
 
                 <div id="dailyReportResult" class="hidden bg-white rounded-xl shadow-md p-6 border border-slate-200">
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -1343,8 +1314,6 @@
             if (document.getElementById('reportDailyDate')) document.getElementById('reportDailyDate').value = dataLocal;
             if (document.getElementById('reportMonth')) document.getElementById('reportMonth').value = mesLocal;
             if (document.getElementById('reportAllMonth')) document.getElementById('reportAllMonth').value = mesLocal;
-            if (document.getElementById('auditDateStart')) document.getElementById('auditDateStart').value = dataLocal.slice(0, 8) + '01';
-            if (document.getElementById('auditDateEnd')) document.getElementById('auditDateEnd').value = dataLocal;
         }
 
         // Normaliza as quatro classificações de responsabilidade definidas no SQL.
@@ -2144,7 +2113,6 @@
         // PROTÓTIPO: CRIAÇÃO DE RELATÓRIOS
         // ==========================================
         let relatorioMensalAtual = { headers: [], rows: [], month: "" };
-        let relatorioAuditoriaAtual = { headers: [], rows: [], data_ini: "", data_fim: "" };
 
         function obterBaseAppsScriptRelatorios() {
             const raw = document.getElementById('appscript_url').value.trim();
@@ -2159,106 +2127,6 @@
             el.classList.add(...cls); el.textContent = msg;
         }
 
-
-        async function gerarAnaliseAuditoriaUI() {
-            const btn = document.getElementById('btnAuditRun');
-            const dataIni = document.getElementById('auditDateStart').value;
-            const dataFim = document.getElementById('auditDateEnd').value;
-            if (!dataIni || !dataFim || dataIni > dataFim) {
-                mostrarStatusRelatorios('Informe um período válido para a Análise Auditoria.', 'erro');
-                return;
-            }
-            const dias = Math.round((new Date(dataFim + 'T00:00:00') - new Date(dataIni + 'T00:00:00')) / 86400000) + 1;
-            if (dias > 366) {
-                mostrarStatusRelatorios('O período máximo da Análise Auditoria é de 366 dias.', 'erro');
-                return;
-            }
-            let base; try { base = obterBaseAppsScriptRelatorios(); } catch (e) { mostrarStatusRelatorios(e.message, 'erro'); return; }
-            btn.disabled = true;
-            btn.textContent = 'Analisando chamados...';
-            document.getElementById('auditReportResult').classList.add('hidden');
-            document.getElementById('btnAuditCsv').disabled = true;
-            try {
-                const url = new URL(base);
-                url.searchParams.set('acao', 'auditoria');
-                url.searchParams.set('data_ini', dataIni);
-                url.searchParams.set('data_fim', dataFim);
-                const response = await fetch(url.toString());
-                if (!response.ok) throw new Error('Falha HTTP ' + response.status);
-                const result = await response.json();
-                if (!result.encontrado) throw new Error(result.erro || 'O Apps Script não conseguiu executar a análise.');
-                relatorioAuditoriaAtual = {
-                    headers: result.colunas || [],
-                    rows: result.linhas || [],
-                    data_ini: dataIni,
-                    data_fim: dataFim,
-                    truncado: result.truncado === true,
-                    varridos: result.varridos || 0
-                };
-                renderizarTabelaAuditoria();
-                document.getElementById('auditReportMeta').textContent =
-                    relatorioAuditoriaAtual.rows.length + ' inconformidade(s) encontrada(s) • ' +
-                    relatorioAuditoriaAtual.varridos + ' conversas analisadas • ' +
-                    dataIni.split('-').reverse().join('/') + ' a ' + dataFim.split('-').reverse().join('/');
-                document.getElementById('auditReportResult').classList.remove('hidden');
-                document.getElementById('btnAuditCsv').disabled = !relatorioAuditoriaAtual.rows.length;
-                const diagnostico = result.diagnostico || {};
-                const semAtributos = Number(diagnostico.conversas_sem_atributos_auditoria || 0);
-                const detalhes = Number(diagnostico.detalhes_individuais_consultados || 0);
-                if (relatorioAuditoriaAtual.truncado) {
-                    mostrarStatusRelatorios('Análise parcial: um dos blocos atingiu o limite de páginas. O resultado pode estar incompleto.', 'erro');
-                } else if (semAtributos > 0) {
-                    mostrarStatusRelatorios(
-                        'Atenção: ' + semAtributos + ' conversa(s) ainda vieram sem os atributos necessários, mesmo após consultar ' + detalhes + ' detalhe(s). O resultado não pode ser considerado equivalente ao banco até esses dados serem recuperados.',
-                        'erro'
-                    );
-                } else {
-                    mostrarStatusRelatorios(
-                        'Análise concluída. ' + detalhes + ' detalhe(s) individual(is) foram consultados para completar os atributos antes da aplicação das regras.',
-                        'sucesso'
-                    );
-                }
-            } catch (e) {
-                mostrarStatusRelatorios('Não foi possível gerar a Análise Auditoria: ' + e.message, 'erro');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Executar análise';
-            }
-        }
-
-        function renderizarTabelaAuditoria() {
-            const wrap = document.getElementById('auditReportTableWrap');
-            const { headers, rows } = relatorioAuditoriaAtual;
-            if (!rows.length) {
-                wrap.innerHTML = '<p class="text-sm text-slate-500 p-4">Nenhuma inconformidade encontrada no período selecionado.</p>';
-                return;
-            }
-            const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-            wrap.innerHTML = '<table class="min-w-full text-xs text-left border-collapse"><thead><tr class="bg-slate-800 text-white">' +
-                headers.map(h => '<th class="p-2 border whitespace-nowrap">' + esc(h) + '</th>').join('') +
-                '</tr></thead><tbody>' +
-                rows.map(row => '<tr class="odd:bg-white even:bg-slate-50">' +
-                    headers.map(h => '<td class="p-2 border whitespace-nowrap">' + esc(row[h]) + '</td>').join('') +
-                    '</tr>').join('') + '</tbody></table>';
-        }
-
-        function baixarAnaliseAuditoriaCSV() {
-            const { headers, rows, data_ini, data_fim } = relatorioAuditoriaAtual;
-            if (!headers.length || !rows.length) {
-                mostrarStatusRelatorios('Execute a Análise Auditoria antes de baixar o CSV.', 'erro');
-                return;
-            }
-            const csv = '\uFEFF' + [headers, ...rows.map(row => headers.map(h => row[h] ?? ''))]
-                .map(row => row.map(csvEscapeRelatorio).join(';')).join('\r\n');
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'analise_auditoria_' + data_ini + '_a_' + data_fim + '.csv';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            URL.revokeObjectURL(link.href);
-        }
 
         async function gerarRelatorioDiarioUI() {
             const btn = document.getElementById('btnGenerateDaily');
