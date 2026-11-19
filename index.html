@@ -31,13 +31,13 @@
         .pdf-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         .pdf-field { min-width: 0; }
         .pdf-label { display: block; margin-bottom: 1mm; color: #5c6e85; font-size: 6.5pt; font-weight: bold; text-transform: uppercase; }
-        .pdf-value { min-height: 7mm; padding: 1.5mm 2mm; border: 1px solid #cad6e3; border-radius: 1mm; background: #f7f9fb; color: #17283d; font-size: 8pt; font-weight: bold; overflow-wrap: anywhere; }
+        .pdf-value { min-height: 7mm; padding: 1.5mm 2mm; border: 1px solid #cad6e3; border-radius: 1mm; background: #f7f9fb; color: #17283d; font-size: 8pt; font-weight: bold; overflow-wrap: anywhere; word-break: normal; hyphens: none; line-height: 1.3; }
         .pdf-value-blue { background: #eef5ff; border-color: #91b9ed; color: #17438b; }
         .pdf-value-red { background: #fff3f3; border-color: #f1b8b8; color: #a31616; }
         .pdf-value-green { background: #effbf3; border-color: #a8e8bf; color: #176b36; }
         .pdf-stage { display: flex; flex-wrap: wrap; row-gap: 1mm; gap: 1mm 4mm; align-items: center; min-height: 7mm; padding: 1.5mm 2mm; border: 1px solid #cad6e3; border-radius: 1mm; background: #f7f9fb; font-weight: bold; }
         .pdf-points { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5mm; }
-        .pdf-point { display: flex; justify-content: space-between; gap: 2mm; padding: 1.5mm 2mm; border: 1px solid #c8dcfb; border-radius: 1mm; background: #f0f6ff; color: #17438b; font-size: 7pt; }
+        .pdf-point { display: flex; justify-content: space-between; align-items: flex-start; gap: 2mm; padding: 1.5mm 2mm; border: 1px solid #c8dcfb; border-radius: 1mm; background: #f0f6ff; color: #17438b; font-size: 7pt; line-height: 1.25; overflow-wrap: anywhere; word-break: normal; }
         .pdf-point-status { color: #a31616; font-size: 6pt; font-weight: bold; }
         .pdf-point-not-affected { border-color: #cdd8e3; background: #ffffff; color: #5c6e85; }
         .pdf-point-status-normal { color: #176b36; font-size: 6pt; font-weight: bold; }
@@ -335,8 +335,10 @@
                     <div class="flex flex-col md:flex-row justify-end gap-3 pt-4 border-t border-slate-200">
                         <button type="button" onclick="clearForm()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-4 py-2.5 rounded-lg text-sm transition">Limpar / Novo</button>
                         <button type="submit" id="btnSave" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-lg text-sm shadow transition flex items-center justify-center gap-2"><span>💾</span> Salvar Registro na Planilha</button>
-                        <button type="button" id="btnGeneratePdf" onclick="generatePDFFromCurrentForm()" class="bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-wait text-white font-bold px-6 py-2.5 rounded-lg text-sm shadow transition flex items-center justify-center gap-2"><span>📄</span> Gerar e Baixar PDF CISU</button>
+                        <button type="button" id="btnGeneratePdf" onclick="generatePDFFromCurrentForm()" class="bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-wait text-white font-bold px-6 py-2.5 rounded-lg text-sm shadow transition flex items-center justify-center gap-2"><span>📄</span> Gerar PDF + Salvar</button>
                     </div>
+
+                    <p id="pdfSaveStatus" class="hidden rounded-lg p-3 text-xs font-bold border" role="status" aria-live="polite"></p>
 
                 </form>
             </div>
@@ -348,10 +350,11 @@
                 <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4 pb-4 border-b border-slate-200">
                     <div>
                         <h2 class="text-xl font-bold text-slate-900">Planilha de Controle Unificada</h2>
-                        <p class="text-sm text-slate-500">Rastreabilidade completa integrando Chamados Chatwoot e Registros CCO.</p>
+                        <p class="text-sm text-slate-500">Rastreabilidade completa lida direto da planilha do Google Sheets. <span id="tableCount" class="font-bold text-slate-700"></span></p>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
                         <input type="text" id="tableSearch" onkeyup="filterTable()" placeholder="Buscar protocolo, cidade..." class="text-sm p-2 border border-slate-300 rounded-lg w-64 outline-none focus:ring-2 focus:ring-blue-500">
+                        <button type="button" onclick="carregarRegistrosDaPlanilha({ forcar: true })" id="btnTableRefresh" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-4 py-2 rounded-lg text-sm transition">🔄 Atualizar da planilha</button>
                     </div>
                 </div>
 
@@ -361,7 +364,7 @@
                             <tr class="bg-slate-800 text-white uppercase text-[10px] tracking-wider">
                                 <th class="p-3 border">Ações</th>
                                 <th class="p-3 border">Nº Chatwoot</th>
-                                <th class="p-3 border">Nº CCO</th>
+                                <th class="p-3 border">Nº CISU</th>
                                 <th class="p-3 border">Estágio</th>
                                 <th class="p-3 border">Data Emissão</th>
                                 <th class="p-3 border">Tipo</th>
@@ -385,27 +388,105 @@
         <!-- TAB 3: DASHBOARD GERENCIAL -->
         <section id="dash-tab" class="tab-content hidden">
             <div class="space-y-6">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                        <div><p class="text-xs text-slate-500 font-bold uppercase">Total de Registros</p><h3 id="dash-kpi-total" class="text-2xl font-black text-slate-800 mt-1">0</h3></div><div class="p-3 bg-blue-50 text-blue-600 rounded-lg text-xl">📊</div>
-                    </div>
-                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                        <div><p class="text-xs text-slate-500 font-bold uppercase">Ocorrências Ativas (Inicial)</p><h3 id="dash-kpi-inicial" class="text-2xl font-black text-amber-600 mt-1">0</h3></div><div class="p-3 bg-amber-50 text-amber-600 rounded-lg text-xl">⏳</div>
-                    </div>
-                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                        <div><p class="text-xs text-slate-500 font-bold uppercase">Concluídas (Final)</p><h3 id="dash-kpi-final" class="text-2xl font-black text-emerald-600 mt-1">0</h3></div><div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg text-xl">✅</div>
-                    </div>
-                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                        <div><p class="text-xs text-slate-500 font-bold uppercase">Média Duração (Horas)</p><h3 id="dash-kpi-media" class="text-2xl font-black text-purple-600 mt-1">0h</h3></div><div class="p-3 bg-purple-50 text-purple-600 rounded-lg text-xl">⏱️</div>
+                <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0b1f4d] via-blue-900 to-sky-700 text-white p-6 shadow-xl">
+                    <div class="absolute -right-10 -top-16 h-56 w-56 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+                    <div class="absolute -left-16 -bottom-20 h-48 w-48 rounded-full bg-sky-300/10 blur-2xl pointer-events-none"></div>
+                    <div class="relative flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5">
+                        <div>
+                            <p class="text-[11px] font-bold uppercase tracking-[0.25em] text-sky-200">Painel gerencial</p>
+                            <h2 class="text-2xl md:text-3xl font-black mt-1">Dashboard de CISUs</h2>
+                            <p class="text-sm text-blue-100/85 mt-1">Indicadores lidos direto da planilha de controle — não dependem mais do navegador.</p>
+                            <p id="dashAtualizadoEm" class="text-[11px] text-sky-200/90 mt-3">Carregando dados da planilha…</p>
+                        </div>
+                        <div class="flex flex-wrap items-end gap-2">
+                            <div>
+                                <label for="dashDateStart" class="block text-[10px] font-bold uppercase tracking-wider text-sky-200 mb-1">De</label>
+                                <input id="dashDateStart" type="date" class="text-sm p-2 rounded-lg bg-white/95 text-slate-800 border border-white/40 outline-none focus:ring-2 focus:ring-sky-300">
+                            </div>
+                            <div>
+                                <label for="dashDateEnd" class="block text-[10px] font-bold uppercase tracking-wider text-sky-200 mb-1">Até</label>
+                                <input id="dashDateEnd" type="date" class="text-sm p-2 rounded-lg bg-white/95 text-slate-800 border border-white/40 outline-none focus:ring-2 focus:ring-sky-300">
+                            </div>
+                            <button type="button" onclick="dashAplicarPeriodo()" id="btnDashApply" class="bg-white text-blue-900 hover:bg-sky-100 font-bold px-4 py-2 rounded-lg text-sm shadow transition">Aplicar período</button>
+                            <button type="button" onclick="dashAtualizar()" class="bg-blue-800/60 hover:bg-blue-800 text-white font-bold px-4 py-2 rounded-lg text-sm border border-white/20 transition">Atualizar</button>
+                        </div>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                        <h3 class="text-sm font-bold text-slate-800 mb-4">Ocorrências por Tipo de Intermitência</h3>
+
+                <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4">
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                        <div class="flex items-center justify-between"><p class="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Total de CISUs</p><span class="p-2 bg-blue-50 text-blue-600 rounded-lg text-sm">📊</span></div>
+                        <h3 id="dash-kpi-total" class="text-2xl font-black text-slate-800 mt-2">0</h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                        <div class="flex items-center justify-between"><p class="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Em aberto (Inicial)</p><span class="p-2 bg-amber-50 text-amber-600 rounded-lg text-sm">⏳</span></div>
+                        <h3 id="dash-kpi-inicial" class="text-2xl font-black text-amber-600 mt-2">0</h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                        <div class="flex items-center justify-between"><p class="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Finalizadas</p><span class="p-2 bg-emerald-50 text-emerald-600 rounded-lg text-sm">✅</span></div>
+                        <h3 id="dash-kpi-final" class="text-2xl font-black text-emerald-600 mt-2">0</h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                        <div class="flex items-center justify-between"><p class="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Canceladas</p><span class="p-2 bg-rose-50 text-rose-600 rounded-lg text-sm">🚫</span></div>
+                        <h3 id="dash-kpi-cancelado" class="text-2xl font-black text-rose-600 mt-2">0</h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                        <div class="flex items-center justify-between"><p class="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Manutenção DESO</p><span class="p-2 bg-violet-50 text-violet-600 rounded-lg text-sm">🛠️</span></div>
+                        <h3 id="dash-kpi-manutencao" class="text-2xl font-black text-violet-600 mt-2">0</h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                        <div class="flex items-center justify-between"><p class="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Duração média</p><span class="p-2 bg-sky-50 text-sky-600 rounded-lg text-sm">⏱️</span></div>
+                        <h3 id="dash-kpi-media" class="text-2xl font-black text-sky-700 mt-2">0h</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900">CISUs abertas por responsabilidade</h3>
+                            <p class="text-xs text-slate-500">Contagem no período selecionado, pela coluna Responsabilidade Operacional.</p>
+                        </div>
+                        <span id="dashRespResumo" class="text-xs font-bold text-slate-500"></span>
+                    </div>
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div class="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-4">
+                            <p class="text-[10px] font-bold uppercase tracking-wide text-blue-700">DESO</p>
+                            <h4 id="dash-resp-deso" class="text-3xl font-black text-blue-900 mt-1">0</h4>
+                            <p class="text-[10px] text-slate-500 mt-1">Responsabilidade DESO</p>
+                        </div>
+                        <div class="rounded-xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-white p-4">
+                            <p class="text-[10px] font-bold uppercase tracking-wide text-cyan-700">IGUÁ</p>
+                            <h4 id="dash-resp-igua" class="text-3xl font-black text-cyan-900 mt-1">0</h4>
+                            <p class="text-[10px] text-slate-500 mt-1">Responsabilidade IGUÁ</p>
+                        </div>
+                        <div class="rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50 to-white p-4">
+                            <p class="text-[10px] font-bold uppercase tracking-wide text-teal-700">MANANCIAL</p>
+                            <h4 id="dash-resp-manancial" class="text-3xl font-black text-teal-900 mt-1">0</h4>
+                            <p class="text-[10px] text-slate-500 mt-1">Responsabilidade MANANCIAL</p>
+                        </div>
+                        <div class="rounded-xl border border-orange-200 bg-gradient-to-br from-orange-50 to-white p-4">
+                            <p class="text-[10px] font-bold uppercase tracking-wide text-orange-700">TERCEIROS</p>
+                            <h4 id="dash-resp-terceiros" class="text-3xl font-black text-orange-900 mt-1">0</h4>
+                            <p class="text-[10px] text-slate-500 mt-1">Responsabilidade TERCEIROS</p>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-3">Manutenção DESO = CISUs com responsabilidade DESO e Intermitência Programada (parada de manutenção).</p>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-800 mb-1">Por tipo de intermitência</h3>
+                        <p class="text-[11px] text-slate-500 mb-3">Distribuição das CISUs do período.</p>
                         <div class="h-64"><canvas id="chartTipo"></canvas></div>
                     </div>
-                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                        <h3 class="text-sm font-bold text-slate-800 mb-4">Volume por Sistema UPSTREAM Afetado</h3>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-800 mb-1">Por responsabilidade</h3>
+                        <p class="text-[11px] text-slate-500 mb-3">Quem originou a abertura.</p>
+                        <div class="h-64"><canvas id="chartResponsabilidade"></canvas></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-800 mb-1">Top unidades (UPSTREAM)</h3>
+                        <p class="text-[11px] text-slate-500 mb-3">As 8 unidades com mais CISUs.</p>
                         <div class="h-64"><canvas id="chartSistema"></canvas></div>
                     </div>
                 </div>
@@ -432,16 +513,11 @@
                         </div>
                         <span class="inline-flex w-fit items-center rounded-full bg-amber-100 text-amber-800 px-3 py-1 text-xs font-bold">MODO DE TESTE</span>
                     </div>
-                    <div class="rounded-xl border-2 border-amber-300 bg-amber-50 p-5 mb-5">
-                        <div class="flex items-center gap-2 mb-1"><span class="text-xl">🚫</span><h3 class="font-bold text-slate-900">Houve algum CISU cancelado? <span class="text-red-600">(obrigatório)</span></h3></div>
-                        <p class="text-xs text-slate-600 mb-3">Responda antes de gerar o relatório diário ou mensal. A resposta vale para uma geração por vez.</p>
-                        <div class="flex gap-3 mb-3 max-w-xs">
-                            <button type="button" id="btnCancelSim" onclick="responderCisuCancelado(true)" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm bg-white hover:bg-red-50">Sim</button>
-                            <button type="button" id="btnCancelNao" onclick="responderCisuCancelado(false)" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 font-bold text-sm bg-white hover:bg-slate-100">Não</button>
-                        </div>
-                        <div id="cancelPanel" class="hidden max-w-md">
-                            <label for="cancel_chamado" class="block text-xs font-bold text-slate-700 mb-1">Nº do chamado do CISU cancelado (se houver mais de um, separe por vírgula)</label>
-                            <input id="cancel_chamado" type="text" placeholder="Ex: 4521, 4530" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white">
+                    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 mb-5 flex items-start gap-3">
+                        <span class="text-xl leading-none">🔁</span>
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-sm">Cancelamentos são automáticos</h3>
+                            <p class="text-xs text-slate-600 mt-1">O sistema lê sozinho a aba de controle: todo chamado com <strong>Estágio = CANCELADO</strong> é marcado como cancelado no relatório diário e no mensal. Não é preciso digitar nenhum número.</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -465,7 +541,7 @@
                         </div>
                         <div class="rounded-xl border border-slate-200 p-5 lg:col-span-2">
                             <div class="flex items-center gap-2 mb-2"><span class="text-2xl">🗂️</span><h3 class="font-bold text-slate-900">Todas as ocorrências do mês</h3></div>
-                            <p class="text-sm text-slate-500 mb-4">Traz todos os chamados do mês, sem nenhum filtro (inclui dúvidas e chamados cancelados). Os cancelados aparecem marcados como CANCELADO, em vermelho: tanto os já marcados no Chatwoot quanto o(s) chamado(s) que você informar na pergunta acima (obrigatória aqui também).</p>
+                            <p class="text-sm text-slate-500 mb-4">Traz todos os chamados do mês, sem nenhum filtro (inclui dúvidas e chamados cancelados). Os cancelados aparecem marcados como CANCELADO, em vermelho, e são identificados automaticamente pela planilha de controle e pelo próprio Chatwoot.</p>
                             <label for="reportAllMonth" class="block text-xs font-bold text-slate-700 mb-1">Mês</label>
                             <input id="reportAllMonth" type="month" class="w-full max-w-xs p-2.5 border border-slate-300 rounded-lg mb-4 block">
                             <button type="button" onclick="gerarRelatorioMensalUI(true)" id="btnGenerateAll" class="w-full max-w-xs bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white font-bold px-4 py-2.5 rounded-lg">Consultar todas as ocorrências do mês</button>
@@ -1248,6 +1324,8 @@
             box.classList.remove('hidden'); box.classList.add('flex');
             preencherEmissorLogado();
             if (typeof carregarPontosEntregaDaPlanilha === 'function') carregarPontosEntregaDaPlanilha();
+            if (typeof carregarRegistrosDaPlanilha === 'function') carregarRegistrosDaPlanilha();
+            if (typeof carregarProximoNumeroCisu === 'function') carregarProximoNumeroCisu();
             return true;
         }
 
@@ -1370,7 +1448,7 @@
                 chamado = chamado.replace('#', '');
                 
                 // Monta a URL de busca diretamente
-                const urlBusca = urlInput + "?chamado=" + encodeURIComponent(chamado);
+                const urlBusca = urlInput + "?chamado=" + encodeURIComponent(chamado) + "&token=" + encodeURIComponent(obterTokenLogin() || "");
 
                 // Fetch simples e seguro
                 const response = await fetch(urlBusca);
@@ -1462,6 +1540,7 @@
     // Registro CISU conforme o tipo de registro escolhido
     const registro = registroPorEtapa(document.getElementById('estagio').value, chatwootRegistros);
     if (registro) document.getElementById('registro_cco').value = registro;
+    else carregarProximoNumeroCisu();
     calcularDuracao();
     // Recria o bloco de Pontos de Entrega com a unidade trazida do chamado
     montarBlocoPontosFormulario({ resetar: true });
@@ -1528,6 +1607,7 @@
             // O campo de protocolo/chamado só abre no FECHAMENTO.
             if (isRecorrenciaAtiva()) { atualizarProtocoloRecorrencia(); return; }
             document.getElementById('registro_cco').value = registroPorEtapa(etapa, chatwootRegistros);
+            carregarProximoNumeroCisu();
         }
 
         function togglePercentualField() {
@@ -1585,6 +1665,15 @@
         function codigoPontoEntrega(texto) {
             const m = String(texto || '').toUpperCase().trim().match(/^([A-Z]{1,3})\s*-\s*(\d{1,3})\b/);
             return m ? m[1] + m[2] : '';
+        }
+
+        // Rótulo exibido ao operador: troca a letra da Regional por "ID",
+        // mantendo o número e a descrição. Ex.: "M-161 (Saída do REL)" -> "ID-161 (Saída do REL)".
+        // O valor gravado em pe_afetado continua sendo o original (o matching depende dele).
+        function rotuloPontoEntrega(texto) {
+            const original = String(texto || '').trim();
+            if (!original) return '';
+            return original.replace(/^([A-Za-z]{1,4})\s*-\s*(\d{1,3})\b/, 'ID-$2');
         }
 
         function tipoUnidade(nome) {
@@ -1685,7 +1774,7 @@
                     botao.title = afetado ? 'Clique para desmarcar (NORMAL)' : 'Clique para marcar (AFETADO)';
                     botao.className = 'flex items-center justify-between gap-2 p-2 border rounded text-left text-xs font-bold transition ' + (afetado ? 'bg-blue-50 border-blue-400 text-blue-900 hover:bg-blue-100' : 'bg-white border-slate-300 text-slate-500 hover:bg-slate-100');
                     const nome = document.createElement('span');
-                    nome.textContent = (afetado ? '[X] ' : '[ ] ') + 'ID ' + id;
+                    nome.textContent = (afetado ? '[X] ' : '[ ] ') + rotuloPontoEntrega(id);
                     const selo = document.createElement('span');
                     selo.className = 'px-1.5 py-0.5 rounded text-[9px] tracking-wider text-white ' + (afetado ? 'bg-red-600' : 'bg-emerald-600');
                     selo.textContent = afetado ? 'AFETADO' : 'NORMAL';
@@ -1750,7 +1839,7 @@
                 const raw = document.getElementById('appscript_url').value.trim();
                 if (!raw) return;
                 const base = raw.split('?')[0];
-                const response = await fetch(base + '?acao=pontos_entrega');
+                const response = await fetch(base + '?acao=pontos_entrega&token=' + encodeURIComponent(obterTokenLogin() || ''));
                 if (!response.ok) return;
                 const result = await response.json();
                 if (result && result.encontrado && Array.isArray(result.unidades) && result.unidades.length) {
@@ -2133,23 +2222,41 @@
             const data = document.getElementById('reportDailyDate').value;
             const operador = document.getElementById('reportOperator').value.trim();
             if (!data) { mostrarStatusRelatorios('Selecione a data de início do plantão.', 'erro'); return; }
-            const cancelados = validarCancelados(); if (!cancelados) return;
             let base; try { base = obterBaseAppsScriptRelatorios(); } catch (e) { mostrarStatusRelatorios(e.message, 'erro'); return; }
             btn.disabled = true; btn.textContent = 'Consultando Chatwoot...';
             try {
-                const url = new URL(base); url.searchParams.set('acao','diario'); url.searchParams.set('data',data); if (cancelados.length) url.searchParams.set('cancelados', cancelados.join(','));
+                const url = new URL(base); url.searchParams.set('acao','diario'); url.searchParams.set('data',data);
                 const response = await fetch(url.toString());
                 if (!response.ok) throw new Error('Falha HTTP ' + response.status);
                 const result = await response.json();
                 if (!result.encontrado) throw new Error(result.erro || 'O Apps Script não encontrou o relatório.');
-                document.getElementById('dailyReportText').value = result.texto || '';
-                document.getElementById('dailyReportMeta').textContent = 'Plantão: ' + data.split('-').reverse().join('/') + ' 08:00 até o dia seguinte às 08:00' + (operador ? ' • Conferência solicitada para: ' + operador : '') + ' • ' + ((result.contagem?.andamento || 0) + (result.contagem?.finalizadas || 0) + (result.contagem?.programadas || 0)) + ' ocorrências';
+                let textoDiario = result.texto || '';
+                // Bloco automático do grupo estratégico: paradas com mais de 3 horas.
+                let totalLongas = null;
+                try {
+                    const urlLongas = new URL(base);
+                    urlLongas.searchParams.set('acao', 'paradas_longas');
+                    urlLongas.searchParams.set('inicio', data);
+                    const respLongas = await fetch(urlLongas.toString());
+                    if (respLongas.ok) {
+                        const longas = await respLongas.json();
+                        if (longas.encontrado && longas.texto) {
+                            textoDiario += '\n\n' + longas.texto;
+                            totalLongas = Number(longas.total) || 0;
+                        }
+                    }
+                } catch (e) { /* o resumo de 3h é complementar */ }
+                document.getElementById('dailyReportText').value = textoDiario;
+                document.getElementById('dailyReportMeta').textContent = 'Plantão: ' + data.split('-').reverse().join('/') + ' 08:00 até o dia seguinte às 08:00' + (operador ? ' • Conferência solicitada para: ' + operador : '') + ' • ' + ((result.contagem?.andamento || 0) + (result.contagem?.finalizadas || 0) + (result.contagem?.programadas || 0)) + ' ocorrências' + (totalLongas === null ? '' : ' • ' + totalLongas + ' parada(s) > 3h');
                 document.getElementById('dailyReportResult').classList.remove('hidden');
-                const truncado = result.truncado === true;
-                mostrarStatusRelatorios(truncado ? 'Relatório gerado, mas a busca atingiu o limite de páginas. Confira antes de usar.' : 'Relatório diário carregado. A busca não atingiu o limite de páginas. Lembre-se: o script atual ainda não filtra por operador.', truncado ? 'erro' : 'sucesso');
-                const ausentes = result.cancelados_ausentes || [];
-                if (ausentes.length) mostrarStatusRelatorios('Relatório gerado, mas o(s) chamado(s) cancelado(s) ' + ausentes.join(', ') + ' não apareceram neste plantão. Confira o número e a data.', 'erro');
-                limparRespostaCancelado();
+                const avisosDiario = [];
+                if (result.truncado === true) avisosDiario.push('a busca atingiu o limite de páginas');
+                const ausentesDiario = Array.isArray(result.cancelados_ausentes) ? result.cancelados_ausentes : [];
+                if (ausentesDiario.length) avisosDiario.push('cancelado(s) da planilha não apareceram neste plantão: ' + ausentesDiario.join(', '));
+                mostrarStatusRelatorios(avisosDiario.length
+                    ? 'Relatório gerado com avisos: ' + avisosDiario.join(' • ') + '. Confira antes de usar.'
+                    : 'Relatório diário carregado, com o resumo automático das paradas acima de 3 horas anexado ao texto.',
+                    avisosDiario.length ? 'erro' : 'sucesso');
             } catch (e) { mostrarStatusRelatorios('Não foi possível gerar o relatório diário: ' + e.message, 'erro'); }
             finally { btn.disabled = false; btn.textContent = 'Gerar relatório diário'; }
         }
@@ -2165,47 +2272,75 @@
             return '"' + s.replace(/"/g, '""') + '"';
         }
 
+        // Limpa os valores vindos do Chatwoot para o relatório mensal:
+        // datas no formato "2026-11-18T12:00:00.000Z" perdem o "T12:00:00.000Z"
+        // (o Chatwoot grava data sem hora ao meio-dia UTC) e passam para dd/mm/aaaa.
+        function limparValorRelatorioMensal(valor) {
+            if (valor == null) return '';
+            const s = String(valor).trim();
+            const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/i);
+            if (m) {
+                const dataBR = m[3] + '/' + m[2] + '/' + m[1];
+                const semHora = /T12:00/i.test(s) && /(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})$/i.test(s);
+                return semHora ? dataBR : dataBR + ' ' + m[4] + ':' + m[5];
+            }
+            const d = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (d) return d[3] + '/' + d[2] + '/' + d[1];
+            return s;
+        }
+
         async function gerarRelatorioMensalUI(todos = false) {
             const btn = document.getElementById(todos ? 'btnGenerateAll' : 'btnGenerateMonthly');
             const month = document.getElementById(todos ? 'reportAllMonth' : 'reportMonth').value;
             if (!month) { mostrarStatusRelatorios('Selecione o mês do relatório.', 'erro'); return; }
-            const cancelados = validarCancelados(); if (!cancelados) return;
             let base; try { base = obterBaseAppsScriptRelatorios(); } catch (e) { mostrarStatusRelatorios(e.message, 'erro'); return; }
             btn.disabled = true; btn.textContent = 'Consultando períodos...';
             document.getElementById('monthlyReportResult').classList.add('hidden');
             try {
                 const [year, monthNum] = month.split('-').map(Number);
                 const lastDay = new Date(year, monthNum, 0).getDate();
-                const all = new Map(); let truncated = false; let scanned = 0; const achados = new Set();
+                const all = new Map(); let truncated = false; let scanned = 0;
+                const ausentesMensal = new Set();
                 for (let start = 1; start <= lastDay; start += 7) {
                     const end = Math.min(start + 6, lastDay);
                     const ini = year + '-' + String(monthNum).padStart(2,'0') + '-' + String(start).padStart(2,'0');
                     const fim = year + '-' + String(monthNum).padStart(2,'0') + '-' + String(end).padStart(2,'0');
                     btn.textContent = 'Consultando ' + ini.split('-').reverse().join('/') + ' – ' + fim.split('-').reverse().join('/');
-                    const url = new URL(base); url.searchParams.set('data_ini',ini); url.searchParams.set('data_fim',fim); if (cancelados.length) url.searchParams.set('cancelados', cancelados.join(','));
+                    const url = new URL(base); url.searchParams.set('data_ini',ini); url.searchParams.set('data_fim',fim);
                     if (todos) url.searchParams.set('todos', '1');
                     const response = await fetch(url.toString());
                     if (!response.ok) throw new Error('Falha HTTP ' + response.status + ' no período ' + ini + ' a ' + fim);
                     const result = await response.json();
                     if (!result.encontrado) throw new Error(result.erro || 'Erro na consulta ' + ini + ' a ' + fim);
                     truncated = truncated || result.truncado === true; scanned += result.varridos || 0;
+                    (result.cancelados_ausentes || []).forEach(x => ausentesMensal.add(String(x)));
                     (result.lista || []).forEach(item => { all.set(String(item.chatwoot_id), item); });
-                    (result.cancelados_encontrados || []).forEach(x => achados.add(String(x)));
                 }
                 const records = Array.from(all.values()).sort((a,b) => Number(a.chatwoot_id) - Number(b.chatwoot_id));
                 const keys = new Set(['chatwoot_id','nome_emissor']);
                 records.forEach(item => { Object.keys(item.custom_attributes || {}).forEach(k => keys.add(k)); });
                 const preferred = ['chatwoot_id','nome_emissor','cisu_abertura','cisu_fechamento','situacao_cisu','situacao_chamado','status_chamado','data_ocorrencia','hora_ocorrencia','data_conclusao','hora_conclusao','unidade_operacional','tipo_ocorrencia','tipo_servico','informaes_adicionais','gerencia','coordenacao','duracao','responsabilidade'];
                 const headers = [...preferred.filter(k => keys.has(k)), ...Array.from(keys).filter(k => !preferred.includes(k))];
-                const rows = records.map(item => { const row = {}; headers.forEach(k => row[k] = k === 'chatwoot_id' || k === 'nome_emissor' ? (item[k] ?? '') : ((item.custom_attributes || {})[k] ?? '')); return row; });
+                const rows = records.map(item => {
+                    const row = {};
+                    headers.forEach(k => {
+                        row[k] = (k === 'chatwoot_id' || k === 'nome_emissor')
+                            ? (item[k] ?? '')
+                            : limparValorRelatorioMensal((item.custom_attributes || {})[k] ?? '');
+                    });
+                    return row;
+                });
                 relatorioMensalAtual = { headers, rows, month, truncated, scanned, todos };
                 renderizarTabelaRelatorioMensal();
-                document.getElementById('monthlyReportMeta').textContent = rows.length + (todos ? ' ocorrências encontradas (' + rows.filter(r => r.situacao_chamado === 'CANCELADO').length + ' cancelada(s))' : ' CISUs encontradas') + ' • ' + scanned + ' conversas varridas • ' + month;
+                document.getElementById('monthlyReportMeta').textContent = rows.length + (todos ? ' ocorrências encontradas (' + rows.filter(r => r.situacao_chamado === 'CANCELADO' || r.situacao_cisu === 'CANCELADO').length + ' cancelada(s))' : ' CISUs encontradas') + ' • ' + scanned + ' conversas varridas • ' + month;
                 document.getElementById('monthlyReportResult').classList.remove('hidden');
-                mostrarStatusRelatorios(truncated ? 'Consulta concluída, mas pelo menos um período atingiu o limite de páginas. O resultado pode estar incompleto.' : 'Consulta mensal concluída. Compare as colunas e os registros com o documento oficial antes de usar.', truncated ? 'erro' : 'sucesso');
-                const ausentes = cancelados.filter(x => !achados.has(x));
-                if (ausentes.length) mostrarStatusRelatorios('Consulta concluída, mas o(s) chamado(s) cancelado(s) ' + ausentes.join(', ') + ' não apareceram neste mês. Confira o número.', 'erro');
-                limparRespostaCancelado();
+                const avisosMensal = [];
+                if (truncated) avisosMensal.push('pelo menos um período atingiu o limite de páginas');
+                if (ausentesMensal.size) avisosMensal.push('cancelado(s) da planilha não apareceram no mês: ' + Array.from(ausentesMensal).join(', '));
+                mostrarStatusRelatorios(avisosMensal.length
+                    ? 'Consulta concluída com avisos: ' + avisosMensal.join(' • ') + '. O resultado pode estar incompleto.'
+                    : 'Consulta mensal concluída. Datas e horas foram limpas (sem "T12:00:00.000Z"). Compare as colunas e os registros com o documento oficial antes de usar.',
+                    avisosMensal.length ? 'erro' : 'sucesso');
             } catch (e) { mostrarStatusRelatorios('Não foi possível gerar o relatório mensal: ' + e.message, 'erro'); }
             finally { btn.disabled = false; btn.textContent = todos ? 'Consultar todas as ocorrências do mês' : 'Consultar CISUs do mês'; }
         }
@@ -2251,6 +2386,8 @@
             const base = obterBaseAppsScriptRelatorios();
             const url = new URL(base);
             url.searchParams.set('acao', acao);
+            const token = obterTokenLogin();
+            if (token) url.searchParams.set('token', token);
             Object.keys(params || {}).forEach(function (k) {
                 const v = params[k];
                 if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
@@ -2277,7 +2414,7 @@
             const corpo = Object.assign({ acao: acao }, dados || {});
             const response = await fetch(repUrl(acao, {}), {
                 method: 'POST',
-                body: new URLSearchParams({ data: JSON.stringify(corpo) })
+                body: new URLSearchParams({ data: JSON.stringify(corpo), token: obterTokenLogin() || '' })
             });
             return repLerResposta(response);
         }
@@ -2363,7 +2500,7 @@
 
         function repRenderTudo() {
             repRenderDbReports();
-            repRenderSalvas();
+            builderRenderSalvas();
             repIniciarBuilder();
         }
 
@@ -2636,8 +2773,9 @@
                 '<div class="sm:col-span-3"><label class="block text-[11px] font-bold text-slate-600 mb-0.5">Rótulo</label>' +
                 '<input class="bm-rotulo w-full p-2 border border-slate-300 rounded-lg bg-white text-sm" placeholder="Opcional" value="' + repEsc(m.rotulo || '') + '"></div>' +
                 '<div class="sm:col-span-1 flex sm:justify-end"><button type="button" class="bm-remover bg-red-100 hover:bg-red-200 text-red-700 font-bold px-3 py-2 rounded-lg text-sm" title="Remover métrica">✕</button></div>';
-            row.querySelector('.bm-remover').addEventListener('click', function () { row.remove(); });
+            row.querySelector('.bm-remover').addEventListener('click', function () { row.remove(); builderAtualizarOrdem(); });
             wrap.appendChild(row);
+            builderAtualizarOrdem();
         }
 
         function builderRenderColunas() {
@@ -2666,6 +2804,10 @@
                 selGrupo.innerHTML = '<option value="">— sem agrupamento —</option>' + repOpcoesCampos('');
                 selGrupo.dataset.pronto = '1';
             }
+            if (selGrupo && !selGrupo.dataset.ordem) {
+                selGrupo.addEventListener('change', builderAtualizarOrdem);
+                selGrupo.dataset.ordem = '1';
+            }
             const selOrdem = document.getElementById('builderOrder');
             if (selOrdem && !selOrdem.dataset.pronto) {
                 selOrdem.innerHTML = '<option value="">— padrão —</option>' + repOpcoesCampos('');
@@ -2681,7 +2823,43 @@
                 builderAdicionarMetrica({ funcao: 'count', rotulo: 'Quantidade' });
                 metricas.dataset.pronto = '1';
             }
+            if (metricas && !metricas.dataset.ordem) {
+                metricas.addEventListener('change', builderAtualizarOrdem);
+                metricas.addEventListener('input', builderAtualizarOrdem);
+                metricas.dataset.ordem = '1';
+            }
+            builderAtualizarOrdem();
             builderRenderSalvas();
+        }
+
+        // Reconstroi o seletor "Ordenar por": sem agrupamento mostra os campos;
+        // com agrupamento mostra o grupo e as metricas (m0, m1...).
+        function builderAtualizarOrdem() {
+            const sel = document.getElementById('builderOrder');
+            if (!sel) return;
+            const anterior = sel.value;
+            const selGrupo = document.getElementById('builderGroup');
+            const grupo = selGrupo ? selGrupo.value : '';
+            let html = '<option value="">— padrão —</option>';
+            if (grupo) {
+                html += '<optgroup label="Resultado agrupado">';
+                html += '<option value="grupo">Grupo</option>';
+                document.querySelectorAll('#builderMetrics .builder-metric-row').forEach(function (row, i) {
+                    const rotulo = (row.querySelector('.bm-rotulo').value || '').trim() ||
+                        ((row.querySelector('.bm-funcao') && row.querySelector('.bm-funcao').selectedOptions[0])
+                            ? row.querySelector('.bm-funcao').selectedOptions[0].textContent
+                            : ('Métrica ' + (i + 1)));
+                    html += '<option value="m' + i + '">' + repEsc(rotulo) + '</option>';
+                });
+                html += '</optgroup>';
+            } else {
+                html += repOpcoesCampos(anterior, repCampos());
+            }
+            sel.innerHTML = html;
+            if (anterior) {
+                const existe = Array.from(sel.options).some(function (o) { return o.value === anterior; });
+                if (existe) sel.value = anterior;
+            }
         }
 
         function builderRenderSalvas() {
@@ -2809,7 +2987,6 @@
             document.getElementById('builderDescription').value = '';
             document.getElementById('builderFilters').innerHTML = '';
             document.getElementById('builderGroup').value = '';
-            document.getElementById('builderOrder').value = '';
             document.getElementById('builderDirection').value = 'asc';
             document.getElementById('builderLimit').value = 500;
             builderMarcarColunas(false);
@@ -2822,6 +2999,9 @@
                 metricas.innerHTML = '';
                 builderAdicionarMetrica({ funcao: 'count', rotulo: 'Quantidade' });
             }
+            builderAtualizarOrdem();
+            const selOrdemNova = document.getElementById('builderOrder');
+            if (selOrdemNova) selOrdemNova.value = '';
             document.getElementById('builderResult').classList.add('hidden');
             repStatus('builderStatus', 'Construtor limpo. Monte uma nova consulta.', 'info');
         }
@@ -2838,7 +3018,6 @@
             if (d.data_inicio) document.getElementById('builderDateStart').value = d.data_inicio;
             if (d.data_fim) document.getElementById('builderDateEnd').value = d.data_fim;
             document.getElementById('builderGroup').value = d.agrupar || '';
-            document.getElementById('builderOrder').value = d.ordem || '';
             document.getElementById('builderDirection').value = d.direcao || 'asc';
             document.getElementById('builderLimit').value = d.limite || 500;
 
@@ -2856,6 +3035,16 @@
             metricas.innerHTML = '';
             (d.metricas || []).forEach(function (m) { builderAdicionarMetrica(m); });
             if (!(d.metricas || []).length && d.agrupar) builderAdicionarMetrica({ funcao: 'count', rotulo: 'Quantidade' });
+
+            builderAtualizarOrdem();
+            const selOrdemEditar = document.getElementById('builderOrder');
+            if (selOrdemEditar) {
+                selOrdemEditar.value = d.ordem || '';
+                if (d.ordem && selOrdemEditar.value !== d.ordem) {
+                    // valor antigo/ invalido: garante que nao fique ordenando por engano
+                    selOrdemEditar.value = '';
+                }
+            }
 
             REP_STATE.editando = id;
             const hint = document.getElementById('builderEditingHint');
@@ -2911,7 +3100,11 @@
             activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow');
             activeBtn.classList.remove('text-blue-200');
 
-            if (tabId === 'dash-tab') renderDashboard();
+            if (tabId === 'dash-tab') {
+                renderDashboard();
+                if (!dashCarregado) carregarRegistrosDaPlanilha();
+            }
+            if (tabId === 'table-tab' && !dashCarregado) carregarRegistrosDaPlanilha();
             if (tabId === 'reports-tab') { switchReportSub(REP_STATE.subAtual || 'prontos'); repIniciar(); }
         }
 
@@ -2951,18 +3144,10 @@
             return true;
         }
 
-        async function handleFormSubmit(e) {
-            e.preventDefault();
-
-            if (!validarLimite48h()) return;
-            if (!validarCamposAutomaticos('salvar este registro na planilha')) return;
-
-            const btnSave = document.getElementById('btnSave');
-            const salvarBtnOriginal = btnSave.innerHTML;
-            btnSave.disabled = true;
-            btnSave.innerText = "Enviando para Planilha...";
-
-            const formData = {
+        // Monta o registro da CISU a partir do formulário. É usado tanto pelo
+        // botão "Salvar Registro" quanto pelo "Gerar PDF + Salvar".
+        function montarFormDataCisu() {
+            return {
                 chatwoot_id: valorChatwootId(),
                 is_recorrencia: isRecorrenciaAtiva() ? 'true' : '',
                 registro_cco: document.getElementById('registro_cco').value,
@@ -2984,6 +3169,58 @@
                 causa_detalhada: document.getElementById('causa_detalhada').value,
                 nome_emissor: document.getElementById('nome_emissor').value
             };
+        }
+
+        // Assinatura para não gravar a mesma CISU duas vezes quando o operador
+        // gera o PDF mais de uma vez sem alterar os dados.
+        let ultimoEnvioAssinatura = '';
+        function assinaturaRegistroCisu(dados) {
+            return [dados.chatwoot_id, dados.registro_cco, dados.estagio, dados.data_emissao,
+                dados.inicio_dt, dados.fim_dt, dados.fim_previsto_dt, dados.duracao,
+                dados.sistema_upstream, dados.pe_afetado].join('|');
+        }
+
+        function mostrarStatusPdf(msg, tipo) {
+            const el = document.getElementById('pdfSaveStatus');
+            if (!el) return;
+            el.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-800', 'bg-red-50', 'border-red-200', 'text-red-800', 'bg-amber-50', 'border-amber-200', 'text-amber-800');
+            const cls = tipo === 'erro' ? ['bg-red-50', 'border-red-200', 'text-red-800']
+                : tipo === 'aviso' ? ['bg-amber-50', 'border-amber-200', 'text-amber-800']
+                : ['bg-emerald-50', 'border-emerald-200', 'text-emerald-800'];
+            el.classList.add(...cls);
+            el.textContent = msg;
+        }
+
+        // Envia o registro ao Apps Script e confere a resposta real do servidor.
+        async function enviarRegistroParaPlanilha(dados) {
+            const appscriptUrl = document.getElementById('appscript_url').value.trim();
+            if (!appscriptUrl) throw new Error('URL do Apps Script não configurada na caixa amarela.');
+            const resp = await fetch(appscriptUrl, {
+                method: 'POST',
+                body: new URLSearchParams({
+                    data: JSON.stringify(dados),
+                    token: obterTokenLogin() || ''
+                })
+            });
+            const texto = (await resp.text()).trim();
+            if (!resp.ok || texto !== 'OK') {
+                throw new Error(texto.replace(/^Error:\s*/i, '') || ('Falha HTTP ' + resp.status));
+            }
+            return true;
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+
+            if (!validarLimite48h()) return;
+            if (!validarCamposAutomaticos('salvar este registro na planilha')) return;
+
+            const btnSave = document.getElementById('btnSave');
+            const salvarBtnOriginal = btnSave.innerHTML;
+            btnSave.disabled = true;
+            btnSave.innerText = "Enviando para Planilha...";
+
+            const formData = montarFormDataCisu();
 
             const appscriptUrl = document.getElementById('appscript_url').value.trim();
 
@@ -2998,46 +3235,45 @@
             // recusado (limite de 48h, registro divergente, data do registro, etc.).
             let gravado = false;
             try {
-                const resp = await fetch(appscriptUrl, {
-                    method: 'POST',
-                    body: new URLSearchParams({
-                        data: JSON.stringify(formData),
-                        token: obterTokenLogin() || ''
-                    })
-                });
-                const texto = (await resp.text()).trim();
-                if (resp.ok && texto === 'OK') {
-                    gravado = true;
-                } else {
-                    alert('⛔ A Planilha recusou este registro:\n' + texto.replace(/^Error:\s*/i, ''));
-                }
-            } catch (err) {
-                // Fallback: envio pelo iframe oculto (comportamento anterior), usado
-                // quando o fetch é bloqueado pelo navegador. Nesse modo o Apps Script
-                // registra o resultado apenas no log de execuções.
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = appscriptUrl;
-                form.target = 'hidden_iframe';
-
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'data';
-                input.value = JSON.stringify(formData);
-                form.appendChild(input);
-
-                const tokenInput = document.createElement('input');
-                tokenInput.type = 'hidden';
-                tokenInput.name = 'token';
-                tokenInput.value = obterTokenLogin() || '';
-                form.appendChild(tokenInput);
-
-                document.body.appendChild(form);
-                form.submit();
-                document.body.removeChild(form);
-
-                alert("Registro enviado pelo formulário oculto. Se a linha não aparecer na planilha, veja o motivo no log de execuções do Apps Script.");
+                await enviarRegistroParaPlanilha(formData);
                 gravado = true;
+            } catch (err) {
+                if (/URL do Apps Script não configurada/i.test(String(err && err.message))) {
+                    alert(err.message);
+                    btnSave.disabled = false;
+                    btnSave.innerHTML = salvarBtnOriginal;
+                    return;
+                }
+                // Falha de rede/CORS: tenta o iframe oculto (comportamento anterior).
+                const mensagemServidor = String(err && err.message || '');
+                const falhaDeRede = !mensagemServidor || /failed to fetch|networkerror|load failed/i.test(mensagemServidor);
+                if (!falhaDeRede) {
+                    alert('⛔ A Planilha recusou este registro:\n' + mensagemServidor);
+                } else {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = appscriptUrl;
+                    form.target = 'hidden_iframe';
+
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'data';
+                    input.value = JSON.stringify(formData);
+                    form.appendChild(input);
+
+                    const tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.name = 'token';
+                    tokenInput.value = obterTokenLogin() || '';
+                    form.appendChild(tokenInput);
+
+                    document.body.appendChild(form);
+                    form.submit();
+                    document.body.removeChild(form);
+
+                    alert("Registro enviado pelo formulário oculto. Se a linha não aparecer na planilha, veja o motivo no log de execuções do Apps Script.");
+                    gravado = true;
+                }
             }
 
             if (!gravado) {
@@ -3050,36 +3286,49 @@
 
             if (isRecorrenciaAtiva()) registrarNumeroRecorrenciaUsado();
 
+            proximoCisuCache = null;
+            ultimoEnvioAssinatura = assinaturaRegistroCisu(formData);
             dbData.unshift({ id: Date.now(), ...formData });
             renderTable();
             clearForm();
             btnSave.disabled = false;
             btnSave.innerHTML = "<span>💾</span> Salvar Registro na Planilha";
             switchTab('table-tab');
+            carregarRegistrosDaPlanilha({ forcar: true });
         }
 
         function renderTable() {
             const tbody = document.getElementById('cisuTableBody');
+            if (!tbody) return;
             tbody.innerHTML = '';
+
+            const contador = document.getElementById('tableCount');
+            if (contador) contador.textContent = dbData.length ? '• ' + dbData.length + ' registro(s)' : '';
+
+            if (!dbData.length) {
+                tbody.innerHTML = '<tr><td colspan="14" class="p-8 text-center text-slate-400 font-semibold">Nenhum registro carregado. Clique em “Atualizar da planilha”.</td></tr>';
+                return;
+            }
 
             dbData.forEach((item, index) => {
                 const tr = document.createElement('tr');
                 tr.className = index % 2 === 0 ? 'bg-white' : 'bg-slate-50';
+                const estagio = String(item.estagio || '').toUpperCase();
                 tr.innerHTML = `
-                    <td class="p-2 border"><button onclick="downloadPdfForRecord(${item.id})" class="bg-red-600 hover:bg-red-700 text-white font-bold px-2 py-1 rounded text-[10px] shadow">📄 PDF</button></td>
-                    <td class="p-2 border font-bold text-blue-700">${item.chatwoot_id}</td>
-                    <td class="p-2 border font-bold">${item.registro_cco}</td>
-                    <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.estagio === 'INICIAL' ? 'bg-amber-100 text-amber-800' : (item.estagio === 'CANCELADO' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800')}">${item.estagio}</span></td>
-                    <td class="p-2 border">${formatDate(item.data_emissao)}</td>
-                    <td class="p-2 border">${item.tipo_intermitencia}</td>
-                    <td class="p-2 border">${item.identificacao_ocorrencia}</td>
-                    <td class="p-2 border font-bold text-amber-700">${item.percentual_reducao || '-'}</td>
-                    <td class="p-2 border font-semibold">${item.sistema_upstream}</td>
-                    <td class="p-2 border">${item.cidade}</td>
-                    <td class="p-2 border">${formatDateTime(item.inicio_dt)}</td>
-                    <td class="p-2 border">${formatDateTime(item.fim_dt)}</td>
-                    <td class="p-2 border font-mono font-bold">${item.duracao}</td>
-                    <td class="p-2 border">${item.nome_emissor}</td>
+                    <td class="p-2 border"><button onclick="downloadPdfForRecord(${Number(item.id)})" class="bg-red-600 hover:bg-red-700 text-white font-bold px-2 py-1 rounded text-[10px] shadow">📄 PDF</button></td>
+                    <td class="p-2 border font-bold text-blue-700">${repEsc(item.chatwoot_id)}</td>
+                    <td class="p-2 border font-bold ${estagio === 'CANCELADO' ? 'text-red-700' : ''}">${repEsc(item.registro_cco)}</td>
+                    <td class="p-2 border"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${estagio === 'INICIAL' ? 'bg-amber-100 text-amber-800' : (estagio === 'CANCELADO' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800')}">${repEsc(estagio)}</span></td>
+                    <td class="p-2 border">${repEsc(formatDate(item.data_emissao))}</td>
+                    <td class="p-2 border">${repEsc(item.tipo_intermitencia)}</td>
+                    <td class="p-2 border">${repEsc(item.identificacao_ocorrencia || item.tipo_ocorrencia)}</td>
+                    <td class="p-2 border font-bold text-amber-700">${repEsc(item.percentual_reducao || '-')}</td>
+                    <td class="p-2 border font-semibold">${repEsc(item.sistema_upstream)}</td>
+                    <td class="p-2 border">${repEsc(item.cidade)}</td>
+                    <td class="p-2 border">${repEsc(formatDateTime(item.inicio_dt))}</td>
+                    <td class="p-2 border">${repEsc(formatDateTime(item.fim_dt))}</td>
+                    <td class="p-2 border font-mono font-bold">${repEsc(item.duracao)}</td>
+                    <td class="p-2 border">${repEsc(item.nome_emissor)}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -3091,37 +3340,232 @@
             rows.forEach(row => { row.style.display = row.innerText.toLowerCase().includes(query) ? '' : 'none'; });
         }
 
+        // ==========================================================
+        // PLANILHA DE CONTROLE + DASHBOARD
+        // Os dois passam a ler a aba "Página1" pela rota acao=registros
+        // (Dashboard.gs), em vez de depender apenas do que está no navegador.
+        // ==========================================================
+        let dashRegistros = [];
+        let dashPeriodo = { inicio: '', fim: '' };
+        let dashCarregado = false;
+        let dashCarregando = false;
+        let proximoCisuCache = null;
+        let chartRespInstance = null;
+
+        function parseDuracaoHoras(texto) {
+            const m = String(texto || '').trim().match(/^(\d{1,3}):(\d{2})(?::(\d{2}))?$/);
+            if (!m) return 0;
+            return Number(m[1]) + Number(m[2]) / 60 + (Number(m[3] || 0) / 3600);
+        }
+
+        function formatarHorasDashboard(horas) {
+            if (!horas || !isFinite(horas) || horas <= 0) return '0h';
+            const h = Math.floor(horas);
+            const m = Math.round((horas - h) * 60);
+            return m ? h + 'h ' + m + 'min' : h + 'h';
+        }
+
+        function dashNormalizarResp(valor) {
+            const n = normalizaResponsabilidade(valor);
+            if (n) return n;
+            const s = String(valor || '').toUpperCase().trim();
+            return s || 'NÃO INFORMADA';
+        }
+
+        async function carregarRegistrosDaPlanilha(opcoes = {}) {
+            if (dashCarregando && !opcoes.forcar) return;
+            const campoUrl = document.getElementById('appscript_url');
+            const urlInput = (campoUrl && campoUrl.value.trim()) || APPSCRIPT_URL_PADRAO;
+            const status = document.getElementById('dashAtualizadoEm');
+            const btn = document.getElementById('btnTableRefresh');
+            if (!urlInput) {
+                if (status) status.textContent = 'Configure a URL do Apps Script para ler a planilha.';
+                return;
+            }
+            dashCarregando = true;
+            if (btn) { btn.disabled = true; btn.textContent = 'Atualizando...'; }
+            if (status) status.textContent = 'Carregando dados da planilha…';
+            try {
+                const url = new URL(urlInput.split('?')[0]);
+                url.searchParams.set('acao', 'registros');
+                url.searchParams.set('_', String(Date.now()));
+                const resp = await fetch(url.toString());
+                if (!resp.ok) throw new Error('Falha HTTP ' + resp.status);
+                const dados = await resp.json();
+                if (!dados.encontrado) throw new Error(dados.erro || 'A planilha não retornou os registros.');
+                dashRegistros = Array.isArray(dados.linhas) ? dados.linhas : [];
+                dbData = dashRegistros.slice();
+                dashCarregado = true;
+                renderTable();
+                renderDashboard();
+                if (status) {
+                    status.textContent = 'Atualizado em ' + new Date().toLocaleString('pt-BR') + ' • ' + dashRegistros.length + ' registro(s) lido(s) da planilha' + (dados.truncado ? ' (limite de linhas atingido)' : '');
+                }
+            } catch (e) {
+                if (status) status.textContent = 'Não foi possível ler a planilha: ' + e.message;
+            } finally {
+                dashCarregando = false;
+                if (btn) { btn.disabled = false; btn.textContent = '🔄 Atualizar da planilha'; }
+            }
+        }
+
+        function dashAplicarPeriodo() {
+            const inicio = document.getElementById('dashDateStart').value || '';
+            const fim = document.getElementById('dashDateEnd').value || '';
+            if (inicio && fim && inicio > fim) {
+                alert('O início do período não pode ser posterior ao fim.');
+                return;
+            }
+            dashPeriodo = { inicio, fim };
+            if (!dashCarregado) { carregarRegistrosDaPlanilha({ forcar: true }); return; }
+            renderDashboard();
+            const status = document.getElementById('dashAtualizadoEm');
+            if (status) {
+                const noPeriodo = dashRegistros.filter(function (d) {
+                    const data = String(d.data_emissao || '').slice(0, 10);
+                    if (inicio && (!data || data < inicio)) return false;
+                    if (fim && (!data || data > fim)) return false;
+                    return true;
+                }).length;
+                status.textContent = 'Filtro: ' + (inicio ? formatDate(inicio) : 'início') + ' a ' + (fim ? formatDate(fim) : 'hoje') + ' • ' + noPeriodo + ' de ' + dashRegistros.length + ' registro(s) da planilha';
+            }
+        }
+
+        function dashAtualizar() {
+            carregarRegistrosDaPlanilha({ forcar: true });
+        }
+
+        // Nº da CISU sequencial para aberturas (INICIAL) sem CISU no Chatwoot.
+        async function carregarProximoNumeroCisu() {
+            if (isRecorrenciaAtiva()) return;
+            if (document.getElementById('estagio').value !== 'INICIAL') return;
+            const campo = document.getElementById('registro_cco');
+            if (String(campo.value || '').trim()) return;
+            const campoUrl = document.getElementById('appscript_url');
+            const urlInput = (campoUrl && campoUrl.value.trim()) || APPSCRIPT_URL_PADRAO;
+            if (!urlInput) return;
+            if (proximoCisuCache) { campo.value = proximoCisuCache; return; }
+            try {
+                const url = new URL(urlInput.split('?')[0]);
+                url.searchParams.set('acao', 'proximo_cisu');
+                url.searchParams.set('_', String(Date.now()));
+                const resp = await fetch(url.toString());
+                if (!resp.ok) return;
+                const dados = await resp.json();
+                if (!dados.encontrado) return;
+                proximoCisuCache = String(dados.numero || '').trim();
+                if (proximoCisuCache && !String(campo.value || '').trim()) campo.value = proximoCisuCache;
+            } catch (e) { /* sem numeração automática: o operador digita */ }
+        }
+
         function renderDashboard() {
-            const total = dbData.length;
-            const inicial = dbData.filter(d => d.estagio === 'INICIAL').length;
-            const final = dbData.filter(d => d.estagio === 'FINAL').length;
+            const registros = dashRegistros.slice();
+            const filtrados = registros.filter(function (d) {
+                const data = String(d.data_emissao || '').slice(0, 10);
+                if (dashPeriodo.inicio && (!data || data < dashPeriodo.inicio)) return false;
+                if (dashPeriodo.fim && (!data || data > dashPeriodo.fim)) return false;
+                return true;
+            });
 
-            document.getElementById('dash-kpi-total').innerText = total;
-            document.getElementById('dash-kpi-inicial').innerText = inicial;
-            document.getElementById('dash-kpi-final').innerText = final;
-            document.getElementById('dash-kpi-media').innerText = "8.5h";
+            const total = filtrados.length;
+            const inicial = filtrados.filter(d => String(d.estagio || '').toUpperCase() === 'INICIAL').length;
+            const final = filtrados.filter(d => String(d.estagio || '').toUpperCase() === 'FINAL').length;
+            const cancelado = filtrados.filter(d => String(d.estagio || '').toUpperCase() === 'CANCELADO').length;
+            const manutencao = filtrados.filter(d => dashNormalizarResp(d.responsabilidade_operacional) === 'DESO'
+                && /PROGRAMADA/i.test(String(d.tipo_intermitencia || ''))).length;
 
+            const duracoes = filtrados.map(d => parseDuracaoHoras(d.duracao)).filter(h => h > 0);
+            const media = duracoes.length ? duracoes.reduce((a, b) => a + b, 0) / duracoes.length : 0;
+
+            const setKpi = (id, valor) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = valor;
+            };
+            setKpi('dash-kpi-total', total);
+            setKpi('dash-kpi-inicial', inicial);
+            setKpi('dash-kpi-final', final);
+            setKpi('dash-kpi-cancelado', cancelado);
+            setKpi('dash-kpi-manutencao', manutencao);
+            setKpi('dash-kpi-media', formatarHorasDashboard(media));
+
+            const resumo = { DESO: 0, 'IGUÁ': 0, MANANCIAL: 0, TERCEIROS: 0 };
+            const respCounts = {};
             const tipoCounts = {};
-            dbData.forEach(d => { tipoCounts[d.tipo_intermitencia] = (tipoCounts[d.tipo_intermitencia] || 0) + 1; });
-
-            if (chartTipoInstance) chartTipoInstance.destroy();
-            const ctx1 = document.getElementById('chartTipo').getContext('2d');
-            chartTipoInstance = new Chart(ctx1, {
-                type: 'doughnut',
-                data: { labels: Object.keys(tipoCounts), datasets: [{ data: Object.values(tipoCounts), backgroundColor: ['#2563eb', '#f59e0b', '#10b981', '#ef4444'] }] },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-
             const sisCounts = {};
-            dbData.forEach(d => { sisCounts[d.sistema_upstream] = (sisCounts[d.sistema_upstream] || 0) + 1; });
 
-            if (chartSistemaInstance) chartSistemaInstance.destroy();
-            const ctx2 = document.getElementById('chartSistema').getContext('2d');
-            chartSistemaInstance = new Chart(ctx2, {
-                type: 'bar',
-                data: { labels: Object.keys(sisCounts), datasets: [{ label: 'Ocorrências', data: Object.values(sisCounts), backgroundColor: '#1e3a8a' }] },
-                options: { responsive: true, maintainAspectRatio: false }
+            filtrados.forEach(function (d) {
+                const resp = dashNormalizarResp(d.responsabilidade_operacional);
+                respCounts[resp] = (respCounts[resp] || 0) + 1;
+                if (resumo.hasOwnProperty(resp)) resumo[resp] += 1;
+
+                const tipo = String(d.tipo_intermitencia || 'Não informado').trim() || 'Não informado';
+                tipoCounts[tipo] = (tipoCounts[tipo] || 0) + 1;
+
+                const sis = String(d.sistema_upstream || 'Não informada').trim() || 'Não informada';
+                sisCounts[sis] = (sisCounts[sis] || 0) + 1;
             });
+
+            setKpi('dash-resp-deso', resumo.DESO);
+            setKpi('dash-resp-igua', resumo['IGUÁ']);
+            setKpi('dash-resp-manancial', resumo.MANANCIAL);
+            setKpi('dash-resp-terceiros', resumo.TERCEIROS);
+            const elResumo = document.getElementById('dashRespResumo');
+            if (elResumo) elResumo.textContent = 'Total no período: ' + total;
+
+            if (typeof Chart !== 'function') return;
+
+            const cores = ['#1d4ed8', '#0e7490', '#0f766e', '#ea580c', '#7c3aed', '#db2777', '#64748b', '#ca8a04'];
+
+            try {
+                if (chartTipoInstance) chartTipoInstance.destroy();
+                const elTipo = document.getElementById('chartTipo');
+                if (elTipo) {
+                    chartTipoInstance = new Chart(elTipo.getContext('2d'), {
+                        type: 'doughnut',
+                        data: { labels: Object.keys(tipoCounts), datasets: [{ data: Object.values(tipoCounts), backgroundColor: cores, borderWidth: 2, borderColor: '#ffffff' }] },
+                        options: {
+                            responsive: true, maintainAspectRatio: false, cutout: '62%',
+                            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
+                        }
+                    });
+                }
+
+                if (chartRespInstance) chartRespInstance.destroy();
+                const elResp = document.getElementById('chartResponsabilidade');
+                if (elResp) {
+                    const labelsResp = Object.keys(respCounts);
+                    chartRespInstance = new Chart(elResp.getContext('2d'), {
+                        type: 'bar',
+                        data: { labels: labelsResp, datasets: [{ label: 'CISUs', data: labelsResp.map(k => respCounts[k]), backgroundColor: cores, borderRadius: 6, maxBarThickness: 42 }] },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#e2e8f0' } }, x: { grid: { display: false } } }
+                        }
+                    });
+                }
+
+                if (chartSistemaInstance) chartSistemaInstance.destroy();
+                const elSis = document.getElementById('chartSistema');
+                if (elSis) {
+                    const top = Object.keys(sisCounts)
+                        .map(k => ({ nome: k, total: sisCounts[k] }))
+                        .sort((a, b) => b.total - a.total)
+                        .slice(0, 8);
+                    chartSistemaInstance = new Chart(elSis.getContext('2d'), {
+                        type: 'bar',
+                        data: { labels: top.map(t => t.nome), datasets: [{ label: 'CISUs', data: top.map(t => t.total), backgroundColor: '#0b3d91', borderRadius: 6, maxBarThickness: 20 }] },
+                        options: {
+                            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#e2e8f0' } }, y: { grid: { display: false }, ticks: { font: { size: 10 } } } }
+                        }
+                    });
+                }
+            } catch (e) {
+                // Se o canvas/Chart.js falhar, os KPIs e a tabela continuam funcionando.
+                console.warn('Dashboard: não foi possível desenhar os gráficos.', e);
+            }
         }
 
         function populatePdfFields(data) {
@@ -3192,7 +3636,7 @@
                     const item = document.createElement('div');
                     item.className = 'pdf-point' + (afetado ? '' : ' pdf-point-not-affected');
                     const name = document.createElement('span');
-                    name.textContent = (afetado ? '[X] ' : '[ ] ') + id;
+                    name.textContent = (afetado ? '[X] ' : '[ ] ') + rotuloPontoEntrega(id);
                     const status = document.createElement('span');
                     status.className = 'pdf-point-status' + (afetado ? '' : ' pdf-point-status-normal');
                     status.textContent = afetado ? 'AFETADO' : 'NORMAL';
@@ -3200,7 +3644,7 @@
                     pointsContainer.appendChild(item);
                 });
             } else {
-                document.getElementById('pdf_points_free').textContent = peLinhas.join(' ; ') || '—';
+                document.getElementById('pdf_points_free').textContent = peLinhas.map(rotuloPontoEntrega).join(' ; ') || '—';
             }
         }
 
@@ -3214,31 +3658,29 @@
                 if (!validarLimite48h()) return false;
                 if (!validarCamposAutomaticos('gerar o PDF da CISU')) return false;
 
-                const formData = {
-                    chatwoot_id: valorChatwootId(),
-                    is_recorrencia: isRecorrenciaAtiva() ? 'true' : '',
-                    registro_cco: document.getElementById('registro_cco').value || "CISU",
-                    estagio: document.getElementById('estagio').value,
-                    data_emissao: document.getElementById('data_emissao').value,
-                    tipo_intermitencia: document.getElementById('tipo_intermitencia').value,
-                    identificacao_ocorrencia: document.getElementById('identificacao_ocorrencia').value,
-                tipo_ocorrencia: document.getElementById('tipo_ocorrencia').value,
-                    percentual_reducao: document.getElementById('percentual_reducao').value || "",
-                    especificacao: document.getElementById('especificacao').value,
-                    inicio_dt: document.getElementById('inicio_dt').value,
-                    fim_dt: document.getElementById('fim_dt').value,
-                    fim_previsto_dt: document.getElementById('fim_previsto_dt').value,
-                    duracao: document.getElementById('duracao').value,
-                    sistema_upstream: document.getElementById('sistema_upstream').value,
-                    cidade: document.getElementById('cidade').value,
-                    responsabilidade_operacional: normalizaResponsabilidade(document.getElementById('responsabilidade_operacional').value),
-                    pe_afetado: document.getElementById('pe_afetado').value,
-                    causa_detalhada: document.getElementById('causa_detalhada').value,
-                    nome_emissor: document.getElementById('nome_emissor').value
-                };
+                const formData = montarFormDataCisu();
+                const assinatura = assinaturaRegistroCisu(formData);
 
                 populatePdfFields(formData);
-                await exportHtmlToPdf(formData.registro_cco);
+                await exportHtmlToPdf(formData.registro_cco || 'CISU');
+
+                // Item 2/11: ao gerar o PDF, a CISU é gravada automaticamente na planilha.
+                // A assinatura evita duplicar quando o operador gera o PDF duas vezes.
+                if (assinatura !== ultimoEnvioAssinatura) {
+                    button.textContent = 'Salvando na planilha...';
+                    try {
+                        await enviarRegistroParaPlanilha(formData);
+                        ultimoEnvioAssinatura = assinatura;
+                        proximoCisuCache = null;
+                        mostrarStatusPdf('✅ PDF gerado e CISU salva automaticamente na planilha.', 'sucesso');
+                    } catch (erroSalvar) {
+                        mostrarStatusPdf('⚠️ O PDF foi gerado, mas a gravação automática falhou: ' + erroSalvar.message + ' O formulário foi mantido — use "Salvar Registro na Planilha" para tentar de novo.', 'erro');
+                        return true;
+                    }
+                } else {
+                    mostrarStatusPdf('PDF gerado. Esta CISU já estava salva na planilha — nada foi duplicado.', 'aviso');
+                }
+
                 // No modo recorrência o formulário permanece preenchido: o operador
                 // pode ajustar data/hora, regerar o PDF e salvar na planilha.
                 if (!isRecorrenciaAtiva()) clearForm();
@@ -3266,39 +3708,6 @@
             }
         }
 
-        let cisuCanceladoResposta = null; // null = não respondeu, true = sim, false = não
-
-        function responderCisuCancelado(sim) {
-            cisuCanceladoResposta = sim;
-            document.getElementById('cancelPanel').classList.toggle('hidden', !sim);
-            document.getElementById('btnCancelSim').classList.toggle('bg-red-200', sim);
-            document.getElementById('btnCancelNao').classList.toggle('bg-slate-300', !sim);
-        }
-
-        function limparRespostaCancelado() {
-            cisuCanceladoResposta = null;
-            document.getElementById('cancel_chamado').value = '';
-            document.getElementById('cancelPanel').classList.add('hidden');
-            document.getElementById('btnCancelSim').classList.remove('bg-red-200');
-            document.getElementById('btnCancelNao').classList.remove('bg-slate-300');
-        }
-
-        // Devolve a lista de chamados cancelados ([] se "Não"), ou null se faltar resposta
-        function validarCancelados() {
-            if (cisuCanceladoResposta === null) {
-                mostrarStatusRelatorios('Responda "Houve algum CISU cancelado?" antes de gerar o relatório.', 'erro');
-                return null;
-            }
-            if (!cisuCanceladoResposta) return [];
-            const ids = Array.from(new Set(document.getElementById('cancel_chamado').value
-                .split(/[,;\s]+/).map(x => x.replace('#', '').trim()).filter(Boolean)));
-            if (!ids.length) {
-                mostrarStatusRelatorios('Informe o nº do chamado do CISU cancelado.', 'erro');
-                return null;
-            }
-            return ids;
-        }
-
         async function exportHtmlToPdf(filename) {
             if (typeof html2pdf !== 'function') {
                 throw new Error('A biblioteca de geração de PDF não foi carregada.');
@@ -3307,7 +3716,37 @@
             const agora = new Date();
             const pad2 = (n) => String(n).padStart(2, '0');
             document.getElementById('pdf_sent_at').textContent = `${pad2(agora.getDate())}/${pad2(agora.getMonth() + 1)}/${agora.getFullYear()}, ${pad2(agora.getHours())}:${pad2(agora.getMinutes())}:${pad2(agora.getSeconds())}`;
-            const opt = { margin: 0, filename: `${filename} - Ficha CISU.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }, pagebreak: { mode: ['css', 'legacy'] } };
+            // scale 3 + pagebreak "avoid" nos blocos pequenos: evita cortes e
+            // espaços truncados/ilegíveis na captura dos campos.
+            const opt = {
+                margin: 0,
+                filename: `${filename} - Ficha CISU.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                    scale: 3,
+                    useCORS: true,
+                    scrollX: 0,
+                    scrollY: 0,
+                    backgroundColor: '#ffffff',
+                    windowWidth: element.scrollWidth
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+                pagebreak: { mode: ['css', 'legacy'], avoid: ['.pdf-value', '.pdf-point', '.pdf-destinatarios div', '.pdf-section-title'] }
+            };
+            // Garante que a fonte e o logo estejam prontos antes da captura,
+            // sem travar a geração se algum recurso demorar.
+            const limitePronto = new Promise(resolve => setTimeout(resolve, 4000));
+            if (document.fonts && document.fonts.ready) {
+                try { await Promise.race([document.fonts.ready, limitePronto]); } catch (e) { /* segue */ }
+            }
+            const imagens = Array.prototype.slice.call(element.querySelectorAll('img'));
+            await Promise.race([
+                Promise.all(imagens.map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
+                    img.addEventListener('load', resolve, { once: true });
+                    img.addEventListener('error', resolve, { once: true });
+                }))),
+                limitePronto
+            ]);
             try {
                 await html2pdf().set(opt).from(element).save();
             } catch (err) {
@@ -3353,6 +3792,7 @@
             });
             montarBlocoPontosFormulario({ resetar: true });
             carregarPontosEntregaDaPlanilha();
+            carregarRegistrosDaPlanilha();
             renderizarCasosRecorrencia();
         });
     </script>
