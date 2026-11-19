@@ -415,6 +415,15 @@
         <!-- TAB 4: CRIAÇÃO DE RELATÓRIOS (PROTÓTIPO) -->
         <section id="reports-tab" class="tab-content hidden">
             <div class="space-y-6">
+                <div class="bg-white rounded-xl shadow-md p-3 border border-slate-200">
+                    <div class="flex flex-wrap gap-2" id="repSubNav" aria-label="Seções de relatórios">
+                        <button type="button" id="rep-sub-btn-prontos" onclick="switchReportSub('prontos')" class="rep-sub-btn px-4 py-2 rounded-lg text-sm font-bold border border-blue-700 bg-blue-700 text-white hover:bg-blue-800">📄 Relatórios prontos</button>
+                        <button type="button" id="rep-sub-btn-banco" onclick="switchReportSub('banco')" class="rep-sub-btn px-4 py-2 rounded-lg text-sm font-bold border border-slate-300 bg-white text-slate-700 hover:bg-slate-100">🗄️ Consultas do banco</button>
+                        <button type="button" id="rep-sub-btn-builder" onclick="switchReportSub('builder')" class="rep-sub-btn px-4 py-2 rounded-lg text-sm font-bold border border-slate-300 bg-white text-slate-700 hover:bg-slate-100">🛠️ Criar consulta</button>
+                    </div>
+                </div>
+
+                <div id="rep-sub-prontos" class="space-y-6">
                 <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200">
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
                         <div>
@@ -511,6 +520,179 @@
                     </div>
                     <p class="text-xs text-slate-500 mb-3">A tabela mostra os campos disponíveis no retorno do Apps Script. Confira se correspondem a todas as colunas exigidas pelo documento mensal oficial.</p>
                     <div id="monthlyReportTableWrap" class="overflow-x-auto"></div>
+                </div>
+                </div><!-- /rep-sub-prontos -->
+
+                <div id="rep-sub-banco" class="hidden space-y-6">
+                    <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-2">
+                            <div>
+                                <h2 class="text-xl font-bold text-slate-900">Consultas do banco de dados</h2>
+                                <p class="text-sm text-slate-500 mt-1">Executa no Chatwoot as mesmas consultas salvas no LibreOffice Base, sem escrever SQL.</p>
+                            </div>
+                            <span class="inline-flex w-fit items-center rounded-full bg-emerald-100 text-emerald-800 px-3 py-1 text-xs font-bold">SEM SQL</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-4">As consultas leem os chamados pela API do Chatwoot. O período é obrigatório e vale como filtro principal (data de conclusão ou data da ocorrência, conforme a consulta).</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div>
+                                <label for="dbDateStart" class="block text-xs font-bold text-slate-700 mb-1">Data inicial</label>
+                                <input id="dbDateStart" type="date" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white">
+                            </div>
+                            <div>
+                                <label for="dbDateEnd" class="block text-xs font-bold text-slate-700 mb-1">Data final</label>
+                                <input id="dbDateEnd" type="date" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white">
+                            </div>
+                            <div>
+                                <label for="dbDossie" class="block text-xs font-bold text-slate-700 mb-1">Nº do chamado (só dossiê)</label>
+                                <input id="dbDossie" type="number" min="1" placeholder="Ex: 3734" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white">
+                            </div>
+                            <div class="flex items-end">
+                                <button type="button" onclick="repAtualizarCatalogo(true)" id="btnDbReload" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold px-4 py-2.5 rounded-lg text-sm">Recarregar catálogo</button>
+                            </div>
+                        </div>
+                        <p id="dbCatalogHint" class="text-xs text-slate-500 mt-3">Carregando catálogo de consultas…</p>
+                        <div id="dbReportsList" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mt-4"></div>
+                    </div>
+
+                    <div id="dbReportStatus" class="hidden rounded-lg p-4 text-sm border" role="status" aria-live="polite"></div>
+
+                    <div id="dbReportResult" class="hidden bg-white rounded-xl shadow-md p-6 border border-slate-200">
+                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+                            <div>
+                                <h3 id="dbReportTitle" class="font-bold text-lg text-slate-900">Resultado</h3>
+                                <p id="dbReportMeta" class="text-xs text-slate-500 mt-1"></p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" onclick="copiarResultadoRelatorio('db')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-lg text-sm">Copiar dados</button>
+                                <button type="button" onclick="baixarResultadoRelatorioCSV('db')" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-lg text-sm">Baixar CSV</button>
+                            </div>
+                        </div>
+                        <div id="dbReportBlocks" class="space-y-6"></div>
+                    </div>
+                </div>
+
+                <div id="rep-sub-builder" class="hidden space-y-6">
+                    <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-2">
+                            <div>
+                                <h2 class="text-xl font-bold text-slate-900">Criar consulta</h2>
+                                <p class="text-sm text-slate-500 mt-1">Monte a consulta escolhendo campos, filtros e agrupamentos. Não é necessário digitar SQL.</p>
+                            </div>
+                            <span class="inline-flex w-fit items-center rounded-full bg-blue-100 text-blue-800 px-3 py-1 text-xs font-bold">CONSTRUTOR</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                            <div>
+                                <label for="builderName" class="block text-xs font-bold text-slate-700 mb-1">Nome da consulta *</label>
+                                <input id="builderName" type="text" placeholder="Ex: Chamados por gerência" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white">
+                            </div>
+                            <div>
+                                <label for="builderDescription" class="block text-xs font-bold text-slate-700 mb-1">Descrição</label>
+                                <input id="builderDescription" type="text" placeholder="Para que serve esta consulta (opcional)" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                            <div>
+                                <label for="builderDateField" class="block text-xs font-bold text-slate-700 mb-1">Campo de data do período</label>
+                                <select id="builderDateField" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white"></select>
+                            </div>
+                            <div>
+                                <label for="builderDateStart" class="block text-xs font-bold text-slate-700 mb-1">Data inicial</label>
+                                <input id="builderDateStart" type="date" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white">
+                            </div>
+                            <div>
+                                <label for="builderDateEnd" class="block text-xs font-bold text-slate-700 mb-1">Data final</label>
+                                <input id="builderDateEnd" type="date" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white">
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl border border-slate-200 p-4 mb-4">
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <h3 class="font-bold text-slate-900 text-sm">Filtros</h3>
+                                <button type="button" onclick="builderAdicionarFiltro()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-lg text-xs">+ Adicionar filtro</button>
+                            </div>
+                            <p class="text-xs text-slate-500 mb-2">Todos os filtros são combinados com E (o chamado precisa atender a todos).</p>
+                            <div id="builderFilters" class="space-y-2"></div>
+                        </div>
+
+                        <div class="rounded-xl border border-slate-200 p-4 mb-4">
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <h3 class="font-bold text-slate-900 text-sm">Colunas do resultado</h3>
+                                <div class="flex gap-2">
+                                    <button type="button" onclick="builderMarcarColunas(true)" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-lg text-xs">Marcar todas</button>
+                                    <button type="button" onclick="builderMarcarColunas(false)" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-lg text-xs">Limpar</button>
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-500 mb-2">Se você escolher um agrupamento, as colunas marcadas não são usadas (o resultado mostra o grupo e as métricas).</p>
+                            <div id="builderColumns" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 max-h-60 overflow-y-auto pr-1"></div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                            <div class="rounded-xl border border-slate-200 p-4">
+                                <h3 class="font-bold text-slate-900 text-sm mb-2">Agrupar por (opcional)</h3>
+                                <select id="builderGroup" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white mb-2"></select>
+                                <p class="text-xs text-slate-500">Ao agrupar, o resultado mostra uma linha por valor do campo e as métricas abaixo.</p>
+                            </div>
+                            <div class="rounded-xl border border-slate-200 p-4">
+                                <div class="flex items-center justify-between gap-2 mb-2">
+                                    <h3 class="font-bold text-slate-900 text-sm">Métricas do agrupamento</h3>
+                                    <button type="button" onclick="builderAdicionarMetrica()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-lg text-xs">+ Métrica</button>
+                                </div>
+                                <div id="builderMetrics" class="space-y-2"></div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                            <div>
+                                <label for="builderOrder" class="block text-xs font-bold text-slate-700 mb-1">Ordenar por</label>
+                                <select id="builderOrder" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white"></select>
+                            </div>
+                            <div>
+                                <label for="builderDirection" class="block text-xs font-bold text-slate-700 mb-1">Direção</label>
+                                <select id="builderDirection" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white">
+                                    <option value="asc">Crescente</option>
+                                    <option value="desc">Decrescente</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="builderLimit" class="block text-xs font-bold text-slate-700 mb-1">Limite de linhas</label>
+                                <input id="builderLimit" type="number" min="1" max="5000" value="500" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white">
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="builderVisualizar()" id="btnBuilderPreview" class="bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-bold px-5 py-2.5 rounded-lg">Pré-visualizar</button>
+                            <button type="button" onclick="builderSalvar()" id="btnBuilderSave" class="bg-emerald-700 hover:bg-emerald-800 disabled:opacity-60 text-white font-bold px-5 py-2.5 rounded-lg">Salvar consulta</button>
+                            <button type="button" onclick="builderNova()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-5 py-2.5 rounded-lg">Nova / limpar</button>
+                            <span id="builderEditingHint" class="hidden self-center text-xs font-bold text-amber-700"></span>
+                        </div>
+                    </div>
+
+                    <div id="builderStatus" class="hidden rounded-lg p-4 text-sm border" role="status" aria-live="polite"></div>
+
+                    <div id="builderResult" class="hidden bg-white rounded-xl shadow-md p-6 border border-slate-200">
+                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+                            <div>
+                                <h3 id="builderResultTitle" class="font-bold text-lg text-slate-900">Prévia da consulta</h3>
+                                <p id="builderResultMeta" class="text-xs text-slate-500 mt-1"></p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" onclick="copiarResultadoRelatorio('builder')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-lg text-sm">Copiar dados</button>
+                                <button type="button" onclick="baixarResultadoRelatorioCSV('builder')" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-lg text-sm">Baixar CSV</button>
+                            </div>
+                        </div>
+                        <div id="builderResultBlocks" class="space-y-6"></div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200">
+                        <div class="flex items-center justify-between gap-2 mb-3">
+                            <h3 class="font-bold text-lg text-slate-900">Consultas salvas</h3>
+                            <button type="button" onclick="repAtualizarCatalogo(true)" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-lg text-xs">Atualizar lista</button>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-3">As consultas salvas ficam na aba <strong>Consultas</strong> da planilha e podem ser reutilizadas por qualquer pessoa com acesso ao sistema.</p>
+                        <div id="savedQueriesList" class="space-y-2"></div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -2176,6 +2358,678 @@
             const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = (relatorioMensalAtual.todos ? 'relatorio_ocorrencias_' : 'relatorio_CISUs_') + month + '.csv'; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(link.href);
         }
 
+        // ==========================================
+        // CONSULTAS DO BANCO + CONSTRUTOR SEM SQL
+        // ==========================================
+        const REP_STATE = {
+            catalogo: null,
+            editando: '',
+            resultados: { db: null, builder: null },
+            inicializado: false,
+            subAtual: 'prontos',
+            timers: {}
+        };
+        const REP_COLUNAS_PADRAO = ['protocolo', 'status', 'tipo_ocorrencia', 'gerencia', 'unidade', 'data_inicio', 'data_conclusao', 'duracao', 'responsabilidade'];
+
+        function repEsc(valor) {
+            return String(valor ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function repCampos() { return (REP_STATE.catalogo && REP_STATE.catalogo.campos) || []; }
+        function repOperadores() { return (REP_STATE.catalogo && REP_STATE.catalogo.operadores) || []; }
+        function repFuncoes() { return (REP_STATE.catalogo && REP_STATE.catalogo.funcoes) || []; }
+
+        function repUrl(acao, params) {
+            const base = obterBaseAppsScriptRelatorios();
+            const url = new URL(base);
+            url.searchParams.set('acao', acao);
+            Object.keys(params || {}).forEach(function (k) {
+                const v = params[k];
+                if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
+            });
+            return url.toString();
+        }
+
+        async function repLerResposta(response) {
+            const texto = (await response.text()).trim();
+            let dados;
+            try { dados = JSON.parse(texto); } catch (e) {
+                throw new Error('O Apps Script devolveu uma resposta inesperada: ' + texto.slice(0, 200));
+            }
+            if (dados && dados.encontrado === false) throw new Error(dados.erro || 'O Apps Script não conseguiu executar a consulta.');
+            return dados;
+        }
+
+        async function repGet(acao, params) {
+            const response = await fetch(repUrl(acao, params));
+            return repLerResposta(response);
+        }
+
+        async function repPost(acao, dados) {
+            const corpo = Object.assign({ acao: acao }, dados || {});
+            const response = await fetch(repUrl(acao, {}), {
+                method: 'POST',
+                body: new URLSearchParams({ data: JSON.stringify(corpo) })
+            });
+            return repLerResposta(response);
+        }
+
+        function repStatus(elId, msg, tipo = 'info') {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            el.classList.remove('hidden', 'bg-blue-50', 'border-blue-200', 'text-blue-800', 'bg-red-50', 'border-red-200', 'text-red-800', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-800', 'bg-amber-50', 'border-amber-200', 'text-amber-800');
+            const cls = tipo === 'erro'
+                ? ['bg-red-50', 'border-red-200', 'text-red-800']
+                : tipo === 'sucesso'
+                    ? ['bg-emerald-50', 'border-emerald-200', 'text-emerald-800']
+                    : tipo === 'aviso'
+                        ? ['bg-amber-50', 'border-amber-200', 'text-amber-800']
+                        : ['bg-blue-50', 'border-blue-200', 'text-blue-800'];
+            el.classList.add(...cls);
+            el.textContent = msg;
+        }
+
+        function repStatusOcupado(elId, msg) {
+            const t0 = Date.now();
+            if (REP_STATE.timers[elId]) clearInterval(REP_STATE.timers[elId]);
+            repStatus(elId, msg + '… (0s)', 'info');
+            REP_STATE.timers[elId] = setInterval(function () {
+                const s = Math.round((Date.now() - t0) / 1000);
+                repStatus(elId, msg + '… (' + s + 's). Consultas de período maior podem levar alguns minutos.', 'info');
+            }, 1000);
+        }
+
+        function repStatusParar(elId, msg, tipo) {
+            if (REP_STATE.timers[elId]) { clearInterval(REP_STATE.timers[elId]); delete REP_STATE.timers[elId]; }
+            repStatus(elId, msg, tipo);
+        }
+
+        function switchReportSub(nome) {
+            const mapa = { prontos: 'rep-sub-prontos', banco: 'rep-sub-banco', builder: 'rep-sub-builder' };
+            Object.keys(mapa).forEach(function (k) {
+                const el = document.getElementById(mapa[k]);
+                if (el) el.classList.toggle('hidden', k !== nome);
+                const btn = document.getElementById('rep-sub-btn-' + k);
+                if (btn) {
+                    const ativo = k === nome;
+                    btn.classList.toggle('bg-blue-700', ativo);
+                    btn.classList.toggle('text-white', ativo);
+                    btn.classList.toggle('border-blue-700', ativo);
+                    btn.classList.toggle('bg-white', !ativo);
+                    btn.classList.toggle('text-slate-700', !ativo);
+                    btn.classList.toggle('border-slate-300', !ativo);
+                    btn.classList.toggle('hover:bg-blue-800', ativo);
+                    btn.classList.toggle('hover:bg-slate-100', !ativo);
+                }
+            });
+            REP_STATE.subAtual = nome;
+            if (nome === 'banco' || nome === 'builder') repIniciar();
+        }
+
+        function repIniciar() {
+            if (!REP_STATE.inicializado) {
+                REP_STATE.inicializado = true;
+                const hoje = new Date();
+                const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                const inicioMes = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0') + '-01';
+                ['dbDateStart', 'builderDateStart'].forEach(function (id) { const el = document.getElementById(id); if (el && !el.value) el.value = inicioMes; });
+                ['dbDateEnd', 'builderDateEnd'].forEach(function (id) { const el = document.getElementById(id); if (el && !el.value) el.value = iso(hoje); });
+            }
+            repAtualizarCatalogo(false);
+        }
+
+        async function repAtualizarCatalogo(forcar) {
+            const hint = document.getElementById('dbCatalogHint');
+            if (REP_STATE.catalogo && !forcar) { repRenderTudo(); return; }
+            if (hint) hint.textContent = 'Carregando catálogo de consultas…';
+            try {
+                const dados = await repGet('relatorios', {});
+                REP_STATE.catalogo = dados;
+                repRenderTudo();
+                if (hint) hint.textContent = (dados.relatorios || []).length + ' consulta(s) pronta(s) • ' + (dados.campos || []).length + ' campos no construtor • versão ' + (dados.versao || '—');
+            } catch (e) {
+                if (hint) hint.textContent = 'Não foi possível carregar o catálogo: ' + e.message;
+                repStatus('dbReportStatus', 'Não foi possível carregar o catálogo de consultas: ' + e.message, 'erro');
+            }
+        }
+
+        function repRenderTudo() {
+            repRenderDbReports();
+            repRenderSalvas();
+            repIniciarBuilder();
+        }
+
+        function repCardRelatorio(r) {
+            const obs = r.id === 'dossie'
+                ? '<p class="text-[11px] text-amber-700 mt-1">Informe o Nº do chamado no campo “Nº do chamado” acima.</p>'
+                : '';
+            return '<div class="rounded-xl border border-slate-200 p-4 flex flex-col justify-between gap-3 bg-slate-50/60">' +
+                '<div>' +
+                '<div class="flex items-start justify-between gap-2">' +
+                '<h4 class="font-bold text-slate-900 text-sm">' + repEsc(r.nome) + '</h4>' +
+                (r.requer_periodo ? '<span class="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full whitespace-nowrap">PERÍODO</span>' : '') +
+                '</div>' +
+                '<p class="text-xs text-slate-600 mt-1">' + repEsc(r.descricao) + '</p>' + obs +
+                '</div>' +
+                '<button type="button" onclick="repExecutarBanco(\'' + repEsc(r.id) + '\')" class="rep-db-run bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-bold px-4 py-2 rounded-lg text-sm">Executar consulta</button>' +
+                '</div>';
+        }
+
+        function repRenderDbReports() {
+            const wrap = document.getElementById('dbReportsList');
+            if (!wrap) return;
+            const rels = (REP_STATE.catalogo && REP_STATE.catalogo.relatorios) || [];
+            if (!rels.length) { wrap.innerHTML = '<p class="text-sm text-slate-500">Nenhuma consulta disponível no catálogo.</p>'; return; }
+            const grupos = {};
+            rels.forEach(function (r) { const g = r.grupo || 'Outros'; (grupos[g] = grupos[g] || []).push(r); });
+            wrap.innerHTML = Object.keys(grupos).map(function (g) {
+                return '<div class="md:col-span-2 xl:col-span-3">' +
+                    '<h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-2">' + repEsc(g) + '</h3>' +
+                    '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">' + grupos[g].map(repCardRelatorio).join('') + '</div>' +
+                    '</div>';
+            }).join('');
+        }
+
+        function repFmtValor(valor, tipo) {
+            if (valor === null || valor === undefined || valor === '') return '';
+            const s = String(valor);
+            if (tipo === 'data') {
+                const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (m) return m[3] + '/' + m[2] + '/' + m[1];
+            }
+            return s;
+        }
+
+        function repMetaTexto(meta) {
+            if (!meta) return '';
+            const partes = [];
+            if (meta.periodo) partes.push(meta.periodo);
+            if (meta.total !== undefined && meta.total !== null) partes.push(meta.total + ' linha(s)');
+            if (meta.varridos !== undefined) partes.push(meta.varridos + ' conversa(s) analisada(s)');
+            if (meta.paginas !== undefined) partes.push(meta.paginas + ' página(s)');
+            if (meta.observacao) partes.push(meta.observacao);
+            if (meta.truncado) partes.push('⚠ resultado parcial: o limite de páginas ou de tempo foi atingido');
+            if (meta.mensagens_parciais) partes.push('⚠ algumas mensagens não puderam ser lidas');
+            return partes.join(' • ');
+        }
+
+        function repHtmlBloco(bloco) {
+            const cols = bloco.colunas || [];
+            const linhas = bloco.linhas || [];
+            const cabecalho = cols.map(c => '<th class="p-2 border whitespace-nowrap text-left">' + repEsc(c.rotulo || c.campo) + '</th>').join('');
+            const corpo = linhas.length
+                ? linhas.map(l => '<tr class="odd:bg-white even:bg-slate-50">' + cols.map(c => '<td class="p-2 border align-top ' + (c.tipo === 'numero' ? 'text-right whitespace-nowrap' : '') + '">' + repEsc(repFmtValor(l[c.campo], c.tipo)) + '</td>').join('') + '</tr>').join('')
+                : '<tr><td class="p-4 text-slate-500" colspan="' + Math.max(1, cols.length) + '">Nenhuma linha encontrada neste bloco.</td></tr>';
+            const total = bloco.total !== undefined && bloco.total !== null ? bloco.total : linhas.length;
+            return '<div>' +
+                '<div class="flex items-center justify-between gap-2 mb-2">' +
+                '<h4 class="font-bold text-slate-900 text-sm">' + repEsc(bloco.titulo || 'Resultado') + '</h4>' +
+                '<span class="text-xs text-slate-500">' + linhas.length + ' de ' + total + ' linha(s)</span>' +
+                '</div>' +
+                '<div class="overflow-auto max-h-[32rem] border border-slate-200 rounded-lg">' +
+                '<table class="min-w-full text-xs border-collapse"><thead class="sticky top-0"><tr class="bg-slate-800 text-white">' + cabecalho + '</tr></thead><tbody>' + corpo + '</tbody></table>' +
+                '</div></div>';
+        }
+
+        function repRenderResultado(prefixo, dados) {
+            const ehDb = prefixo === 'db';
+            const card = document.getElementById(ehDb ? 'dbReportResult' : 'builderResult');
+            const titulo = document.getElementById(ehDb ? 'dbReportTitle' : 'builderResultTitle');
+            const meta = document.getElementById(ehDb ? 'dbReportMeta' : 'builderResultMeta');
+            const wrap = document.getElementById(ehDb ? 'dbReportBlocks' : 'builderResultBlocks');
+            if (titulo) titulo.textContent = dados.titulo || 'Resultado';
+            if (meta) meta.textContent = repMetaTexto(dados.meta);
+            if (wrap) {
+                const blocos = dados.blocos || [];
+                wrap.innerHTML = blocos.length ? blocos.map(repHtmlBloco).join('') : '<p class="text-sm text-slate-500">A consulta não retornou dados para o período informado.</p>';
+            }
+            if (card) card.classList.remove('hidden');
+        }
+
+        function repContarLinhas(dados) {
+            return (dados.blocos || []).reduce((soma, b) => soma + ((b.linhas || []).length), 0);
+        }
+
+        async function repExecutarBanco(id) {
+            const rels = (REP_STATE.catalogo && REP_STATE.catalogo.relatorios) || [];
+            const rel = rels.filter(r => r.id === id)[0] || { id: id, nome: id };
+            const ini = document.getElementById('dbDateStart').value;
+            const fim = document.getElementById('dbDateEnd').value;
+            let conversa = '';
+            if (rel.requer_periodo && (!ini || !fim || ini > fim)) {
+                repStatus('dbReportStatus', 'Informe um período válido (data inicial e data final).', 'erro');
+                return;
+            }
+            if (id === 'dossie') {
+                conversa = (document.getElementById('dbDossie').value || '').replace(/\D/g, '');
+                if (!conversa) {
+                    repStatus('dbReportStatus', 'Informe o Nº do chamado para montar o dossiê.', 'erro');
+                    return;
+                }
+            }
+            document.getElementById('dbReportResult').classList.add('hidden');
+            repStatusOcupado('dbReportStatus', 'Executando “' + (rel.nome || id) + '” no Chatwoot');
+            document.querySelectorAll('#dbReportsList .rep-db-run').forEach(function (b) { b.disabled = true; });
+            try {
+                const dados = await repGet('executar_relatorio', { id: id, inicio: ini, fim: fim, conversa: conversa });
+                REP_STATE.resultados.db = dados;
+                repRenderResultado('db', dados);
+                repStatusParar('dbReportStatus', 'Consulta concluída: ' + repContarLinhas(dados) + ' linha(s) exibida(s).', 'sucesso');
+            } catch (e) {
+                repStatusParar('dbReportStatus', 'Não foi possível executar a consulta: ' + e.message, 'erro');
+            } finally {
+                document.querySelectorAll('#dbReportsList .rep-db-run').forEach(function (b) { b.disabled = false; });
+            }
+        }
+
+        function repResultadoParaLinhas(prefixo) {
+            const dados = REP_STATE.resultados[prefixo];
+            if (!dados) return [];
+            const linhas = [[dados.titulo || 'Consulta']];
+            const meta = repMetaTexto(dados.meta);
+            if (meta) linhas.push([meta]);
+            (dados.blocos || []).forEach(function (b) {
+                linhas.push([]);
+                linhas.push([b.titulo || 'Bloco']);
+                linhas.push((b.colunas || []).map(c => c.rotulo || c.campo));
+                (b.linhas || []).forEach(function (l) {
+                    linhas.push((b.colunas || []).map(c => repFmtValor(l[c.campo], c.tipo)));
+                });
+            });
+            return linhas;
+        }
+
+        function repNomeArquivo(prefixo) {
+            const dados = REP_STATE.resultados[prefixo];
+            const base = ((dados && dados.titulo) || 'consulta').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+            return (base || 'consulta').toLowerCase() + '.csv';
+        }
+
+        function baixarResultadoRelatorioCSV(prefixo) {
+            const linhas = repResultadoParaLinhas(prefixo);
+            if (!linhas.length) { repStatus(prefixo === 'db' ? 'dbReportStatus' : 'builderStatus', 'Execute a consulta antes de baixar o CSV.', 'aviso'); return; }
+            const csv = '\uFEFF' + linhas.map(function (linha) {
+                return linha.map(function (celula) {
+                    return '"' + String(celula ?? '').replace(/"/g, '""') + '"';
+                }).join(';');
+            }).join('\r\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = repNomeArquivo(prefixo);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(link.href);
+        }
+
+        async function repCopiarTexto(texto) {
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(texto);
+                    return true;
+                }
+            } catch (e) { /* cai no fallback */ }
+            const ta = document.createElement('textarea');
+            ta.value = texto;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            let ok = false;
+            try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+            ta.remove();
+            return ok;
+        }
+
+        async function copiarResultadoRelatorio(prefixo) {
+            const linhas = repResultadoParaLinhas(prefixo);
+            const elStatus = prefixo === 'db' ? 'dbReportStatus' : 'builderStatus';
+            if (!linhas.length) { repStatus(elStatus, 'Execute a consulta antes de copiar os dados.', 'aviso'); return; }
+            const texto = linhas.map(l => l.join('\t')).join('\n');
+            const ok = await repCopiarTexto(texto);
+            repStatus(elStatus, ok ? 'Dados copiados para a área de transferência.' : 'Não foi possível copiar automaticamente. Baixe o CSV.', ok ? 'sucesso' : 'erro');
+        }
+
+        // ---------- Construtor de consultas ----------
+        function repOpcoesCampos(selecionado, lista) {
+            const campos = lista || repCampos();
+            const grupos = {};
+            campos.forEach(function (c) {
+                const g = c.grupo || 'Outros';
+                (grupos[g] = grupos[g] || []).push(c);
+            });
+            return Object.keys(grupos).map(function (g) {
+                return '<optgroup label="' + repEsc(g) + '">' + grupos[g].map(function (c) {
+                    return '<option value="' + repEsc(c.campo) + '" data-tipo="' + repEsc(c.tipo) + '"' + (c.campo === selecionado ? ' selected' : '') + '>' + repEsc(c.rotulo) + '</option>';
+                }).join('') + '</optgroup>';
+            }).join('');
+        }
+
+        function repOpcoesOperador(tipo, selecionado) {
+            return repOperadores().filter(function (o) {
+                return !tipo || (o.tipos || []).indexOf(tipo) >= 0;
+            }).map(function (o) {
+                return '<option value="' + o.id + '"' + (o.id === selecionado ? ' selected' : '') + '>' + repEsc(o.rotulo) + '</option>';
+            }).join('');
+        }
+
+        function builderAdicionarFiltro(f) {
+            f = f || {};
+            const wrap = document.getElementById('builderFilters');
+            if (!wrap) return;
+            const row = document.createElement('div');
+            row.className = 'builder-filter-row grid grid-cols-1 sm:grid-cols-12 gap-2 items-end border-b border-slate-100 pb-2';
+            row.innerHTML =
+                '<div class="sm:col-span-4"><label class="block text-[11px] font-bold text-slate-600 mb-0.5">Campo</label>' +
+                '<select class="bf-campo w-full p-2 border border-slate-300 rounded-lg bg-white text-sm"><option value="">— escolha —</option>' + repOpcoesCampos(f.campo) + '</select></div>' +
+                '<div class="sm:col-span-3"><label class="block text-[11px] font-bold text-slate-600 mb-0.5">Condição</label>' +
+                '<select class="bf-op w-full p-2 border border-slate-300 rounded-lg bg-white text-sm"></select></div>' +
+                '<div class="sm:col-span-2"><label class="block text-[11px] font-bold text-slate-600 mb-0.5">Valor</label>' +
+                '<input class="bf-valor w-full p-2 border border-slate-300 rounded-lg bg-white text-sm" value="' + repEsc(f.valor || '') + '"></div>' +
+                '<div class="sm:col-span-2 hidden bf-valor2-wrap"><label class="block text-[11px] font-bold text-slate-600 mb-0.5">Até</label>' +
+                '<input class="bf-valor2 w-full p-2 border border-slate-300 rounded-lg bg-white text-sm" value="' + repEsc(f.valor2 || '') + '"></div>' +
+                '<div class="sm:col-span-1 flex sm:justify-end"><button type="button" class="bf-remover bg-red-100 hover:bg-red-200 text-red-700 font-bold px-3 py-2 rounded-lg text-sm" title="Remover filtro">✕</button></div>';
+            wrap.appendChild(row);
+
+            const selCampo = row.querySelector('.bf-campo');
+            const selOp = row.querySelector('.bf-op');
+            const wrapVal2 = row.querySelector('.bf-valor2-wrap');
+            const valor2 = row.querySelector('.bf-valor2');
+
+            function atualizarValor2() { wrapVal2.classList.toggle('hidden', selOp.value !== 'entre'); }
+            function atualizarOperadores(opPreferido) {
+                const opt = selCampo.options[selCampo.selectedIndex];
+                const tipo = opt ? opt.getAttribute('data-tipo') : '';
+                selOp.innerHTML = repOpcoesOperador(tipo, opPreferido);
+                atualizarValor2();
+            }
+            selCampo.addEventListener('change', function () { atualizarOperadores(''); });
+            selOp.addEventListener('change', atualizarValor2);
+            row.querySelector('.bf-remover').addEventListener('click', function () { row.remove(); });
+            atualizarOperadores(f.op || '');
+        }
+
+        function builderAdicionarMetrica(m) {
+            m = m || {};
+            const wrap = document.getElementById('builderMetrics');
+            if (!wrap) return;
+            const row = document.createElement('div');
+            row.className = 'builder-metric-row grid grid-cols-1 sm:grid-cols-12 gap-2 items-end border-b border-slate-100 pb-2';
+            const opcoesFuncao = repFuncoes().map(function (f) {
+                return '<option value="' + f.id + '"' + (f.id === (m.funcao || 'count') ? ' selected' : '') + '>' + repEsc(f.rotulo) + '</option>';
+            }).join('');
+            row.innerHTML =
+                '<div class="sm:col-span-4"><label class="block text-[11px] font-bold text-slate-600 mb-0.5">Função</label>' +
+                '<select class="bm-funcao w-full p-2 border border-slate-300 rounded-lg bg-white text-sm">' + opcoesFuncao + '</select></div>' +
+                '<div class="sm:col-span-4"><label class="block text-[11px] font-bold text-slate-600 mb-0.5">Campo (se aplicável)</label>' +
+                '<select class="bm-campo w-full p-2 border border-slate-300 rounded-lg bg-white text-sm"><option value="">—</option>' + repOpcoesCampos(m.campo || '') + '</select></div>' +
+                '<div class="sm:col-span-3"><label class="block text-[11px] font-bold text-slate-600 mb-0.5">Rótulo</label>' +
+                '<input class="bm-rotulo w-full p-2 border border-slate-300 rounded-lg bg-white text-sm" placeholder="Opcional" value="' + repEsc(m.rotulo || '') + '"></div>' +
+                '<div class="sm:col-span-1 flex sm:justify-end"><button type="button" class="bm-remover bg-red-100 hover:bg-red-200 text-red-700 font-bold px-3 py-2 rounded-lg text-sm" title="Remover métrica">✕</button></div>';
+            row.querySelector('.bm-remover').addEventListener('click', function () { row.remove(); });
+            wrap.appendChild(row);
+        }
+
+        function builderRenderColunas() {
+            const wrap = document.getElementById('builderColumns');
+            if (!wrap) return;
+            const marcadas = REP_COLUNAS_PADRAO.slice();
+            wrap.innerHTML = repCampos().map(function (c) {
+                return '<label class="flex items-start gap-2 text-xs text-slate-700 py-0.5"><input type="checkbox" class="builder-col mt-0.5" value="' + repEsc(c.campo) + '"' + (marcadas.indexOf(c.campo) >= 0 ? ' checked' : '') + '><span>' + repEsc(c.rotulo) + '</span></label>';
+            }).join('');
+        }
+
+        function builderMarcarColunas(marcar) {
+            document.querySelectorAll('#builderColumns .builder-col').forEach(function (el) { el.checked = !!marcar; });
+        }
+
+        function repIniciarBuilder() {
+            if (!REP_STATE.catalogo) return;
+            const selData = document.getElementById('builderDateField');
+            if (selData && !selData.dataset.pronto) {
+                const datas = repCampos().filter(c => c.tipo === 'data');
+                selData.innerHTML = repOpcoesCampos('data_conclusao', datas);
+                selData.dataset.pronto = '1';
+            }
+            const selGrupo = document.getElementById('builderGroup');
+            if (selGrupo && !selGrupo.dataset.pronto) {
+                selGrupo.innerHTML = '<option value="">— sem agrupamento —</option>' + repOpcoesCampos('');
+                selGrupo.dataset.pronto = '1';
+            }
+            const selOrdem = document.getElementById('builderOrder');
+            if (selOrdem && !selOrdem.dataset.pronto) {
+                selOrdem.innerHTML = '<option value="">— padrão —</option>' + repOpcoesCampos('');
+                selOrdem.dataset.pronto = '1';
+            }
+            const cols = document.getElementById('builderColumns');
+            if (cols && !cols.dataset.pronto) {
+                builderRenderColunas();
+                cols.dataset.pronto = '1';
+            }
+            const metricas = document.getElementById('builderMetrics');
+            if (metricas && !metricas.dataset.pronto) {
+                builderAdicionarMetrica({ funcao: 'count', rotulo: 'Quantidade' });
+                metricas.dataset.pronto = '1';
+            }
+            builderRenderSalvas();
+        }
+
+        function builderRenderSalvas() {
+            const wrap = document.getElementById('savedQueriesList');
+            if (!wrap) return;
+            const salvas = (REP_STATE.catalogo && REP_STATE.catalogo.consultas_salvas) || [];
+            if (!salvas.length) {
+                wrap.innerHTML = '<p class="text-sm text-slate-500">Nenhuma consulta salva ainda. Use o construtor acima e clique em “Salvar consulta”.</p>';
+                return;
+            }
+            wrap.innerHTML = salvas.map(function (c) {
+                return '<div class="rounded-xl border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">' +
+                    '<div><h4 class="font-bold text-slate-900 text-sm">' + repEsc(c.nome) + '</h4>' +
+                    '<p class="text-xs text-slate-600">' + repEsc(c.descricao || 'Sem descrição') + '</p>' +
+                    '<p class="text-[11px] text-slate-400 mt-1">Atualizada em ' + repEsc(c.atualizado_em || c.criado_em || '—') + '</p></div>' +
+                    '<div class="flex flex-wrap gap-2">' +
+                    '<button type="button" onclick="repExecutarSalva(\'' + repEsc(c.id) + '\')" class="bg-blue-700 hover:bg-blue-800 text-white font-bold px-3 py-2 rounded-lg text-xs">Executar</button>' +
+                    '<button type="button" onclick="builderEditar(\'' + repEsc(c.id) + '\')" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-2 rounded-lg text-xs">Carregar</button>' +
+                    '<button type="button" onclick="builderExcluir(\'' + repEsc(c.id) + '\')" class="bg-red-100 hover:bg-red-200 text-red-700 font-bold px-3 py-2 rounded-lg text-xs">Excluir</button>' +
+                    '</div></div>';
+            }).join('');
+        }
+
+        function builderObterConsulta(id) {
+            const salvas = (REP_STATE.catalogo && REP_STATE.catalogo.consultas_salvas) || [];
+            return salvas.filter(c => c.id === id)[0] || null;
+        }
+
+        function builderColetarDef() {
+            const filtros = [];
+            document.querySelectorAll('#builderFilters .builder-filter-row').forEach(function (row) {
+                const campo = row.querySelector('.bf-campo').value;
+                const op = row.querySelector('.bf-op').value;
+                const valor = row.querySelector('.bf-valor').value;
+                const valor2 = row.querySelector('.bf-valor2').value;
+                if (!campo || !op) return;
+                const f = { campo: campo, op: op };
+                if (op !== 'vazio' && op !== 'nao_vazio') f.valor = valor;
+                if (op === 'entre') f.valor2 = valor2;
+                filtros.push(f);
+            });
+            const colunas = Array.from(document.querySelectorAll('#builderColumns .builder-col:checked')).map(el => el.value);
+            const metricas = [];
+            document.querySelectorAll('#builderMetrics .builder-metric-row').forEach(function (row) {
+                const funcao = row.querySelector('.bm-funcao').value;
+                const campo = row.querySelector('.bm-campo').value;
+                const rotulo = row.querySelector('.bm-rotulo').value.trim();
+                if (!funcao) return;
+                metricas.push({ funcao: funcao, campo: campo, rotulo: rotulo });
+            });
+            return {
+                nome: document.getElementById('builderName').value.trim(),
+                descricao: document.getElementById('builderDescription').value.trim(),
+                campo_data: document.getElementById('builderDateField').value || 'data_conclusao',
+                data_inicio: document.getElementById('builderDateStart').value,
+                data_fim: document.getElementById('builderDateEnd').value,
+                filtros: filtros,
+                colunas: colunas,
+                agrupar: document.getElementById('builderGroup').value || '',
+                metricas: metricas,
+                ordem: document.getElementById('builderOrder').value || '',
+                direcao: document.getElementById('builderDirection').value,
+                limite: Number(document.getElementById('builderLimit').value) || 500
+            };
+        }
+
+        function builderValidar(def) {
+            if (!def.data_inicio || !def.data_fim) return 'Informe a data inicial e a data final.';
+            if (def.data_inicio > def.data_fim) return 'A data inicial não pode ser maior que a data final.';
+            if (!def.colunas.length && !(def.agrupar && def.metricas.length)) return 'Selecione ao menos uma coluna ou configure um agrupamento com métricas.';
+            if (def.agrupar && !def.metricas.length) return 'Adicione ao menos uma métrica para o agrupamento selecionado.';
+            return '';
+        }
+
+        async function builderVisualizar() {
+            const btn = document.getElementById('btnBuilderPreview');
+            let def;
+            try { def = builderColetarDef(); } catch (e) { repStatus('builderStatus', e.message, 'erro'); return; }
+            const problema = builderValidar(def);
+            if (problema) { repStatus('builderStatus', problema, 'erro'); return; }
+            document.getElementById('builderResult').classList.add('hidden');
+            btn.disabled = true;
+            repStatusOcupado('builderStatus', 'Executando a pré-visualização no Chatwoot');
+            try {
+                const dados = await repPost('testar_consulta', { definicao: def });
+                REP_STATE.resultados.builder = dados;
+                repRenderResultado('builder', dados);
+                repStatusParar('builderStatus', 'Pré-visualização concluída: ' + repContarLinhas(dados) + ' linha(s).', 'sucesso');
+            } catch (e) {
+                repStatusParar('builderStatus', 'Não foi possível executar a consulta: ' + e.message, 'erro');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function builderSalvar() {
+            const btn = document.getElementById('btnBuilderSave');
+            let def;
+            try { def = builderColetarDef(); } catch (e) { repStatus('builderStatus', e.message, 'erro'); return; }
+            if (!def.nome) { repStatus('builderStatus', 'Informe um nome para a consulta antes de salvar.', 'erro'); return; }
+            const problema = builderValidar(def);
+            if (problema) { repStatus('builderStatus', problema, 'erro'); return; }
+            btn.disabled = true;
+            repStatusOcupado('builderStatus', 'Salvando a consulta na planilha');
+            try {
+                const dados = await repPost('salvar_consulta', { id: REP_STATE.editando, nome: def.nome, descricao: def.descricao, definicao: def });
+                REP_STATE.editando = dados.consulta.id;
+                repStatusParar('builderStatus', 'Consulta “' + def.nome + '” salva com sucesso na aba Consultas.', 'sucesso');
+                const hint = document.getElementById('builderEditingHint');
+                if (hint) { hint.textContent = 'Editando: ' + def.nome; hint.classList.remove('hidden'); }
+                await repAtualizarCatalogo(true);
+            } catch (e) {
+                repStatusParar('builderStatus', 'Não foi possível salvar a consulta: ' + e.message, 'erro');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function builderNova() {
+            if (!REP_STATE.catalogo) { repStatus('builderStatus', 'O catálogo ainda não foi carregado. Clique em “Recarregar catálogo” e tente novamente.', 'aviso'); return; }
+            REP_STATE.editando = '';
+            const hint = document.getElementById('builderEditingHint');
+            if (hint) hint.classList.add('hidden');
+            document.getElementById('builderName').value = '';
+            document.getElementById('builderDescription').value = '';
+            document.getElementById('builderFilters').innerHTML = '';
+            document.getElementById('builderGroup').value = '';
+            document.getElementById('builderOrder').value = '';
+            document.getElementById('builderDirection').value = 'asc';
+            document.getElementById('builderLimit').value = 500;
+            builderMarcarColunas(false);
+            REP_COLUNAS_PADRAO.forEach(function (campo) {
+                const el = document.querySelector('#builderColumns .builder-col[value="' + campo + '"]');
+                if (el) el.checked = true;
+            });
+            const metricas = document.getElementById('builderMetrics');
+            if (metricas) {
+                metricas.innerHTML = '';
+                builderAdicionarMetrica({ funcao: 'count', rotulo: 'Quantidade' });
+            }
+            document.getElementById('builderResult').classList.add('hidden');
+            repStatus('builderStatus', 'Construtor limpo. Monte uma nova consulta.', 'info');
+        }
+
+        function builderEditar(id) {
+            const c = builderObterConsulta(id);
+            if (!c) { repStatus('builderStatus', 'Consulta não encontrada. Atualize a lista.', 'erro'); return; }
+            switchReportSub('builder');
+            repIniciar();
+            const d = c.definicao || {};
+            document.getElementById('builderName').value = c.nome || '';
+            document.getElementById('builderDescription').value = c.descricao || '';
+            if (d.campo_data) document.getElementById('builderDateField').value = d.campo_data;
+            if (d.data_inicio) document.getElementById('builderDateStart').value = d.data_inicio;
+            if (d.data_fim) document.getElementById('builderDateEnd').value = d.data_fim;
+            document.getElementById('builderGroup').value = d.agrupar || '';
+            document.getElementById('builderOrder').value = d.ordem || '';
+            document.getElementById('builderDirection').value = d.direcao || 'asc';
+            document.getElementById('builderLimit').value = d.limite || 500;
+
+            const filtros = document.getElementById('builderFilters');
+            filtros.innerHTML = '';
+            (d.filtros || []).forEach(function (f) { builderAdicionarFiltro(f); });
+
+            builderMarcarColunas(false);
+            (d.colunas || []).forEach(function (campo) {
+                const el = document.querySelector('#builderColumns .builder-col[value="' + campo + '"]');
+                if (el) el.checked = true;
+            });
+
+            const metricas = document.getElementById('builderMetrics');
+            metricas.innerHTML = '';
+            (d.metricas || []).forEach(function (m) { builderAdicionarMetrica(m); });
+            if (!(d.metricas || []).length && d.agrupar) builderAdicionarMetrica({ funcao: 'count', rotulo: 'Quantidade' });
+
+            REP_STATE.editando = id;
+            const hint = document.getElementById('builderEditingHint');
+            if (hint) { hint.textContent = 'Editando: ' + (c.nome || id); hint.classList.remove('hidden'); }
+            repStatus('builderStatus', 'Consulta carregada no construtor. Ajuste o que quiser e salve novamente.', 'info');
+            document.getElementById('rep-sub-builder').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function builderExcluir(id) {
+            const c = builderObterConsulta(id);
+            if (!c) return;
+            if (!confirm('Excluir a consulta “' + c.nome + '”? Esta ação não pode ser desfeita.')) return;
+            repStatusOcupado('builderStatus', 'Excluindo a consulta');
+            try {
+                await repPost('excluir_consulta', { id: id });
+                if (REP_STATE.editando === id) { REP_STATE.editando = ''; const hint = document.getElementById('builderEditingHint'); if (hint) hint.classList.add('hidden'); }
+                repStatusParar('builderStatus', 'Consulta excluída.', 'sucesso');
+                await repAtualizarCatalogo(true);
+            } catch (e) {
+                repStatusParar('builderStatus', 'Não foi possível excluir: ' + e.message, 'erro');
+            }
+        }
+
+        async function repExecutarSalva(id) {
+            const c = builderObterConsulta(id);
+            if (!c) { repStatus('builderStatus', 'Consulta não encontrada. Atualize a lista.', 'erro'); return; }
+            switchReportSub('builder');
+            const ini = document.getElementById('builderDateStart').value;
+            const fim = document.getElementById('builderDateEnd').value;
+            if (!ini || !fim || ini > fim) { repStatus('builderStatus', 'Informe um período válido para executar a consulta salva.', 'erro'); return; }
+            document.getElementById('builderResult').classList.add('hidden');
+            repStatusOcupado('builderStatus', 'Executando a consulta salva “' + c.nome + '”');
+            try {
+                const dados = await repGet('executar_relatorio', { salva: id, inicio: ini, fim: fim });
+                REP_STATE.resultados.builder = dados;
+                repRenderResultado('builder', dados);
+                repStatusParar('builderStatus', 'Consulta “' + c.nome + '” concluída: ' + repContarLinhas(dados) + ' linha(s).', 'sucesso');
+            } catch (e) {
+                repStatusParar('builderStatus', 'Não foi possível executar a consulta salva: ' + e.message, 'erro');
+            }
+        }
+
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
@@ -2190,6 +3044,7 @@
             activeBtn.classList.remove('text-blue-200');
 
             if (tabId === 'dash-tab') renderDashboard();
+            if (tabId === 'reports-tab') { switchReportSub(REP_STATE.subAtual || 'prontos'); repIniciar(); }
         }
 
         // Validações de criação da CISU: (1) campos automáticos obrigatórios;
