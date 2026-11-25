@@ -105,11 +105,12 @@
                     <p class="text-xs text-blue-200">Integração Chatwoot + CCO + Emissão de Ficha CISU</p>
                 </div>
             </div>
-            <nav class="flex bg-blue-950 p-1 rounded-lg gap-1">
+            <nav class="flex flex-wrap bg-blue-950 p-1 rounded-lg gap-1">
                 <button onclick="switchTab('form-tab')" id="btn-form-tab" class="px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white transition shadow">📝 Formulário / Registro</button>
                 <button onclick="switchTab('table-tab')" id="btn-table-tab" class="px-4 py-2 text-sm font-medium rounded-md text-blue-200 hover:text-white transition">📊 Planilha de Controle</button>
                 <button onclick="switchTab('dash-tab')" id="btn-dash-tab" class="px-4 py-2 text-sm font-medium rounded-md text-blue-200 hover:text-white transition">📈 Dashboard Gerencial</button>
                 <button onclick="switchTab('reports-tab')" id="btn-reports-tab" class="px-4 py-2 text-sm font-medium rounded-md text-blue-200 hover:text-white transition">📑 Criação de Relatórios</button>
+                <button onclick="switchTab('permissoes-tab')" id="btn-permissoes-tab" class="hidden px-4 py-2 text-sm font-medium rounded-md text-blue-200 hover:text-white transition">🔐 Permissões</button>
             </nav>
             <div id="user_box" class="hidden items-center gap-3 text-xs text-blue-100">
                 <span id="user_nome" class="font-semibold"></span>
@@ -502,6 +503,7 @@
                         <button type="button" id="rep-sub-btn-banco" onclick="switchReportSub('banco')" class="rep-sub-btn px-4 py-2 rounded-lg text-sm font-bold border border-slate-300 bg-white text-slate-700 hover:bg-slate-100">🗄️ Consultas do banco</button>
                         <button type="button" id="rep-sub-btn-builder" onclick="switchReportSub('builder')" class="rep-sub-btn px-4 py-2 rounded-lg text-sm font-bold border border-slate-300 bg-white text-slate-700 hover:bg-slate-100">🛠️ Criar consulta</button>
                     </div>
+                    <p id="repAvisoPermissao" class="hidden mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">🔒 As consultas do banco e a criação de consultas estão liberadas apenas para usuários autorizados. Fale com o administrador se precisar de acesso.</p>
                 </div>
 
                 <div id="rep-sub-prontos" class="space-y-6">
@@ -758,13 +760,63 @@
                             <h3 class="font-bold text-lg text-slate-900">Consultas salvas</h3>
                             <button type="button" onclick="repAtualizarCatalogo(true)" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-lg text-xs">Atualizar lista</button>
                         </div>
-                        <p class="text-xs text-slate-500 mb-3">As consultas salvas ficam na aba <strong>Consultas</strong> da planilha e podem ser reutilizadas por qualquer pessoa com acesso ao sistema.</p>
+                        <p class="text-xs text-slate-500 mb-3">As consultas salvas ficam na aba <strong>Consultas</strong> da planilha e podem ser reutilizadas por qualquer pessoa autorizada a acessar as consultas do banco.</p>
                         <div id="savedQueriesList" class="space-y-2"></div>
                     </div>
                 </div>
             </div>
         </section>
 
+        <!-- TAB 5: ADMINISTRAÇÃO DE PERMISSÕES -->
+        <section id="permissoes-tab" class="tab-content hidden">
+            <div class="space-y-6">
+                <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Permissões de acesso</h2>
+                            <p class="text-sm text-slate-500 mt-1">Libere ou bloqueie o acesso às <strong>Consultas do banco</strong> e à <strong>Criação de consultas</strong>. Todo colaborador <strong>@deso-se.com.br</strong> continua com acesso ao formulário, planilha, dashboard e relatórios prontos.</p>
+                        </div>
+                        <span class="inline-flex w-fit items-center rounded-full bg-blue-100 text-blue-800 px-3 py-1 text-xs font-bold">ADMINISTRAÇÃO</span>
+                    </div>
+
+                    <form id="permForm" onsubmit="salvarPermissaoUI(event)" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                        <div class="md:col-span-5">
+                            <label for="permEmail" class="block text-xs font-bold text-slate-700 mb-1">E-mail do colaborador</label>
+                            <input id="permEmail" type="email" required placeholder="nome@deso-se.com.br" class="w-full p-2.5 border border-slate-300 rounded-lg">
+                        </div>
+                        <div class="md:col-span-4">
+                            <label for="permObservacao" class="block text-xs font-bold text-slate-700 mb-1">Observação (opcional)</label>
+                            <input id="permObservacao" type="text" maxlength="200" placeholder="Ex.: analista de relatórios" class="w-full p-2.5 border border-slate-300 rounded-lg">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="permPermitir" class="block text-xs font-bold text-slate-700 mb-1">Acesso</label>
+                            <select id="permPermitir" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white">
+                                <option value="SIM">Permitir</option>
+                                <option value="NAO">Bloquear</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-1">
+                            <button type="submit" id="permSalvarBtn" class="w-full bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-bold px-4 py-2.5 rounded-lg">Salvar</button>
+                        </div>
+                    </form>
+
+                    <div id="permStatus" class="hidden mt-4 rounded-lg p-3 text-sm border" role="status" aria-live="polite"></div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-900">Pessoas com acesso liberado</h3>
+                            <p class="text-xs text-slate-500 mt-1">A lista vale para as Consultas do banco e para o construtor de consultas. As alterações passam a valer imediatamente.</p>
+                        </div>
+                        <button type="button" onclick="carregarListaPermissoes(true)" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-lg text-xs">Atualizar lista</button>
+                    </div>
+                    <div id="permLista" class="space-y-2">
+                        <p class="text-sm text-slate-500">Carregando…</p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
     </main>
 
@@ -1294,6 +1346,8 @@
         const GOOGLE_CLIENT_ID = '241593672873-ov3s5rb7nv56ij0kvpvmiu3teb5c46ko.apps.googleusercontent.com';
         const DOMINIO_PERMITIDO = 'deso-se.com.br';
         let usuarioLogado = null;
+        let permissoesUsuario = { consultasBanco: false, carregado: false };
+        let permissoesListaCarregada = false;
 
         function decodificarJwt(token) {
             try {
@@ -1344,6 +1398,7 @@
             const box = document.getElementById('user_box');
             box.classList.remove('hidden'); box.classList.add('flex');
             preencherEmissorLogado();
+            carregarPermissoes();
             if (typeof carregarPontosEntregaDaPlanilha === 'function') carregarPontosEntregaDaPlanilha();
             if (typeof carregarRegistrosDaPlanilha === 'function') carregarRegistrosDaPlanilha();
             if (typeof carregarProximoNumeroCisu === 'function') carregarProximoNumeroCisu();
@@ -1360,7 +1415,246 @@
         function sairLogin() {
             sessionStorage.removeItem('cisu_id_token');
             if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect();
+            permissoesUsuario = { consultasBanco: false, carregado: true };
+            resetConsultasRelatorios();
+            aplicarPermissoesNaTela();
             mostrarTelaLogin();
+        }
+
+        // ==========================================================
+        // PERMISSÕES: CONSULTAS DO BANCO (métricas sensíveis)
+        // ==========================================================
+        function aplicarPermissoesNaTela() {
+            const permitido = permissoesUsuario.consultasBanco === true;
+            const restrito = permissoesUsuario.carregado && !permitido;
+
+            const btnBanco = document.getElementById('rep-sub-btn-banco');
+            const btnBuilder = document.getElementById('rep-sub-btn-builder');
+            if (btnBanco) btnBanco.classList.toggle('hidden', restrito);
+            if (btnBuilder) btnBuilder.classList.toggle('hidden', restrito);
+
+            const aviso = document.getElementById('repAvisoPermissao');
+            if (aviso) aviso.classList.toggle('hidden', !restrito);
+
+            // A aba de administração só aparece para quem já tem acesso às consultas.
+            const btnPermissoes = document.getElementById('btn-permissoes-tab');
+            if (btnPermissoes) btnPermissoes.classList.toggle('hidden', !permitido);
+
+            if (restrito) {
+                const banco = document.getElementById('rep-sub-banco');
+                const builder = document.getElementById('rep-sub-builder');
+                if ((banco && !banco.classList.contains('hidden')) || (builder && !builder.classList.contains('hidden'))) {
+                    switchReportSub('prontos');
+                }
+
+                const listaPerm = document.getElementById('permLista');
+                if (listaPerm) listaPerm.innerHTML = '';
+                permissoesListaCarregada = false;
+
+                const tabPerm = document.getElementById('permissoes-tab');
+                if (tabPerm && !tabPerm.classList.contains('hidden')) switchTab('form-tab');
+            }
+        }
+
+        async function carregarPermissoes() {
+            permissoesUsuario = { consultasBanco: false, carregado: false };
+            permissoesListaCarregada = false;
+
+            const campoUrl = document.getElementById('appscript_url');
+            const urlInput = (campoUrl && campoUrl.value.trim()) || APPSCRIPT_URL_PADRAO;
+
+            try {
+                const url = new URL(urlInput.split('?')[0]);
+                url.searchParams.set('acao', 'permissoes');
+                url.searchParams.set('_', String(Date.now()));
+                const resp = await fetch(url.toString());
+                if (!resp.ok) throw new Error('Falha HTTP ' + resp.status);
+                const dados = await resp.json();
+                permissoesUsuario.consultasBanco = !!(dados && dados.encontrado && dados.consultas_banco);
+            } catch (e) {
+                permissoesUsuario.consultasBanco = false;
+            }
+
+            permissoesUsuario.carregado = true;
+            aplicarPermissoesNaTela();
+        }
+
+        // Ao trocar de usuário, não deixa catálogo/resultados de consultas na memória.
+        function resetConsultasRelatorios() {
+            try {
+                REP_STATE.catalogo = null;
+                REP_STATE.inicializado = false;
+                REP_STATE.resultados = { db: null, builder: null };
+                REP_STATE.subAtual = 'prontos';
+                ['dbReportsList', 'dbReportBlocks', 'builderResultBlocks', 'savedQueriesList'].forEach(function (id) {
+                    const el = document.getElementById(id);
+                    if (el) el.innerHTML = '';
+                });
+            } catch (e) { /* tela de relatórios ainda não inicializada */ }
+        }
+
+        // ==========================================================
+        // TELA DE ADMINISTRAÇÃO DE PERMISSÕES
+        // ==========================================================
+        function permBaseUrl() {
+            const campo = document.getElementById('appscript_url');
+            const raw = (campo && campo.value.trim()) || APPSCRIPT_URL_PADRAO;
+            return raw.split('?')[0];
+        }
+
+        async function permGet(acao) {
+            const url = new URL(permBaseUrl());
+            url.searchParams.set('acao', acao);
+            url.searchParams.set('_', String(Date.now()));
+            const resp = await fetch(url.toString());
+            if (!resp.ok) throw new Error('Falha HTTP ' + resp.status);
+            const dados = await resp.json();
+            if (!dados || dados.encontrado === false) {
+                throw new Error((dados && dados.erro) || 'Não foi possível carregar as permissões.');
+            }
+            return dados;
+        }
+
+        async function permPost(acao, dados) {
+            const corpo = Object.assign({ acao: acao }, dados || {});
+            const resp = await fetch(permBaseUrl(), {
+                method: 'POST',
+                body: new URLSearchParams({ data: JSON.stringify(corpo), token: obterTokenLogin() || '' })
+            });
+            if (!resp.ok) throw new Error('Falha HTTP ' + resp.status);
+            const ret = await resp.json();
+            if (!ret || ret.encontrado === false) {
+                throw new Error((ret && ret.erro) || 'Não foi possível salvar a permissão.');
+            }
+            return ret;
+        }
+
+        function permMostrarStatus(msg, tipo) {
+            const el = document.getElementById('permStatus');
+            if (!el) return;
+            el.classList.remove('hidden', 'bg-blue-50', 'border-blue-200', 'text-blue-800', 'bg-red-50', 'border-red-200', 'text-red-800', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-800', 'bg-amber-50', 'border-amber-200', 'text-amber-800');
+            const cls = tipo === 'erro'
+                ? ['bg-red-50', 'border-red-200', 'text-red-800']
+                : tipo === 'sucesso'
+                    ? ['bg-emerald-50', 'border-emerald-200', 'text-emerald-800']
+                    : tipo === 'aviso'
+                        ? ['bg-amber-50', 'border-amber-200', 'text-amber-800']
+                        : ['bg-blue-50', 'border-blue-200', 'text-blue-800'];
+            el.textContent = msg;
+            el.classList.add(...cls);
+        }
+
+        async function carregarListaPermissoes(forcar) {
+            const wrap = document.getElementById('permLista');
+            if (!wrap) return;
+            if (!forcar && permissoesListaCarregada) return;
+
+            wrap.innerHTML = '<p class="text-sm text-slate-500">Carregando…</p>';
+
+            try {
+                const dados = await permGet('permissoes_listar');
+                permissoesListaCarregada = true;
+                renderizarListaPermissoes(dados.permissoes || [], dados.dono || '');
+            } catch (e) {
+                wrap.innerHTML = '<p class="text-sm text-red-700">' + repEsc(e.message) + '</p>';
+                permMostrarStatus('Não foi possível carregar as permissões: ' + e.message, 'erro');
+            }
+        }
+
+        function renderizarListaPermissoes(lista, dono) {
+            const wrap = document.getElementById('permLista');
+            if (!wrap) return;
+
+            if (!lista.length) {
+                wrap.innerHTML = '<p class="text-sm text-slate-500">Nenhuma permissão cadastrada ainda. Use o formulário acima para liberar o primeiro acesso.</p>';
+                return;
+            }
+
+            wrap.innerHTML = lista.map(function (p) {
+                const badge = p.proprietario
+                    ? '<span class="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">PROPRIETÁRIO</span>'
+                    : p.permitido
+                        ? '<span class="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">LIBERADO</span>'
+                        : '<span class="text-[10px] font-bold bg-red-100 text-red-800 px-2 py-0.5 rounded-full">BLOQUEADO</span>';
+
+                const obs = p.observacao
+                    ? '<p class="text-xs text-slate-500 mt-1">' + repEsc(p.observacao) + '</p>'
+                    : '';
+
+                const acoes = p.proprietario
+                    ? '<span class="text-xs text-slate-400 whitespace-nowrap">Sempre com acesso</span>'
+                    : '<div class="flex gap-2 shrink-0">' +
+                        '<button type="button" data-email="' + repEsc(p.email) + '" onclick="alternarPermissaoUI(this.dataset.email, ' + (p.permitido ? 'false' : 'true') + ')" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-lg text-xs">' + (p.permitido ? 'Bloquear' : 'Liberar') + '</button>' +
+                        '<button type="button" data-email="' + repEsc(p.email) + '" onclick="removerPermissaoUI(this.dataset.email)" class="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-3 py-1.5 rounded-lg text-xs border border-red-200">Remover</button>' +
+                      '</div>';
+
+                return '<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-slate-200 p-3 bg-slate-50/60">' +
+                    '<div class="min-w-0">' +
+                        '<div class="flex items-center gap-2 flex-wrap"><p class="font-bold text-sm text-slate-900 break-all">' + repEsc(p.email) + '</p>' + badge + '</div>' +
+                        obs +
+                    '</div>' +
+                    acoes +
+                '</div>';
+            }).join('');
+        }
+
+        async function salvarPermissaoUI(event) {
+            if (event) event.preventDefault();
+
+            const email = document.getElementById('permEmail').value.trim();
+            const observacao = document.getElementById('permObservacao').value.trim();
+            const permitir = document.getElementById('permPermitir').value === 'SIM';
+
+            if (!email) { permMostrarStatus('Informe o e-mail do colaborador.', 'erro'); return; }
+
+            const btn = document.getElementById('permSalvarBtn');
+            btn.disabled = true;
+            btn.textContent = 'Salvando…';
+
+            try {
+                await permPost('permissoes_salvar', { email: email, permitir: permitir, observacao: observacao });
+                permMostrarStatus('Permissão de ' + email + ' atualizada para ' + (permitir ? 'LIBERADO' : 'BLOQUEADO') + '.', 'sucesso');
+                document.getElementById('permEmail').value = '';
+                document.getElementById('permObservacao').value = '';
+                await carregarListaPermissoes(true);
+                await carregarPermissoes();
+            } catch (e) {
+                permMostrarStatus(e.message, 'erro');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Salvar';
+            }
+        }
+
+        async function alternarPermissaoUI(email, permitir) {
+            const proprio = usuarioLogado && usuarioLogado.email && String(email).toLowerCase() === String(usuarioLogado.email).toLowerCase();
+            if (!permitir && proprio && !confirm('Isso vai bloquear o seu próprio acesso às consultas do banco. Continuar?')) return;
+
+            try {
+                await permPost('permissoes_salvar', { email: email, permitir: permitir });
+                permMostrarStatus('Permissão de ' + email + ' ' + (permitir ? 'liberada' : 'bloqueada') + '.', 'sucesso');
+                await carregarListaPermissoes(true);
+                await carregarPermissoes();
+            } catch (e) {
+                permMostrarStatus(e.message, 'erro');
+            }
+        }
+
+        async function removerPermissaoUI(email) {
+            const proprio = usuarioLogado && usuarioLogado.email && String(email).toLowerCase() === String(usuarioLogado.email).toLowerCase();
+            const mensagem = proprio
+                ? 'Isso vai remover o seu próprio acesso às consultas do banco. Continuar?'
+                : 'Remover a permissão de ' + email + '?';
+            if (!confirm(mensagem)) return;
+
+            try {
+                await permPost('permissoes_excluir', { email: email });
+                permMostrarStatus('Permissão de ' + email + ' removida.', 'sucesso');
+                await carregarListaPermissoes(true);
+                await carregarPermissoes();
+            } catch (e) {
+                permMostrarStatus(e.message, 'erro');
+            }
         }
 
         function iniciarLoginGoogle() {
@@ -2573,6 +2867,10 @@
         }
 
         function switchReportSub(nome) {
+            if ((nome === 'banco' || nome === 'builder') && permissoesUsuario.carregado && !permissoesUsuario.consultasBanco) {
+                alert('Seu usuário não tem acesso às consultas do banco. Solicite liberação ao administrador.');
+                nome = 'prontos';
+            }
             const mapa = { prontos: 'rep-sub-prontos', banco: 'rep-sub-banco', builder: 'rep-sub-builder' };
             Object.keys(mapa).forEach(function (k) {
                 const el = document.getElementById(mapa[k]);
@@ -3211,6 +3509,10 @@
         }
 
         function switchTab(tabId) {
+            if (tabId === 'permissoes-tab' && permissoesUsuario.carregado && !permissoesUsuario.consultasBanco) {
+                tabId = 'form-tab';
+            }
+
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
 
@@ -3228,7 +3530,15 @@
                 if (!dashCarregado) carregarRegistrosDaPlanilha();
             }
             if (tabId === 'table-tab' && !dashCarregado) carregarRegistrosDaPlanilha();
-            if (tabId === 'reports-tab') { switchReportSub(REP_STATE.subAtual || 'prontos'); repIniciar(); }
+            if (tabId === 'reports-tab') {
+                if (permissoesUsuario.carregado && !permissoesUsuario.consultasBanco) {
+                    switchReportSub('prontos');
+                } else {
+                    switchReportSub(REP_STATE.subAtual || 'prontos');
+                    repIniciar();
+                }
+            }
+            if (tabId === 'permissoes-tab') carregarListaPermissoes();
         }
 
         // Validações de criação da CISU: (1) campos automáticos obrigatórios;
