@@ -546,6 +546,18 @@
                             <input id="reportAllMonth" type="month" class="w-full max-w-xs p-2.5 border border-slate-300 rounded-lg mb-4 block">
                             <button type="button" onclick="gerarRelatorioMensalUI(true)" id="btnGenerateAll" class="w-full max-w-xs bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white font-bold px-4 py-2.5 rounded-lg">Consultar todas as ocorrências do mês</button>
                         </div>
+                        <div class="rounded-xl border border-slate-200 p-5 lg:col-span-2">
+                            <div class="flex items-center gap-2 mb-2"><span class="text-2xl">🔎</span><h3 class="font-bold text-slate-900">Análise de auditoria por plantão</h3></div>
+                            <p class="text-sm text-slate-500 mb-2">Aplica as mesmas regras da Consulta Análise Auditoria aos chamados <strong>criados entre 08h da data selecionada e 08h do dia seguinte</strong> (plantão de 24h). O resultado lista as inconformidades encontradas por chamado, com a quantidade de erros.</p>
+                            <p class="text-xs text-slate-500 mb-4">Regras verificadas: itens 3, 4, 7, 8, 10/17 e 24 da consulta do banco (concessionária/protocolo de energia, CISU de abertura e fechamento, data/hora de conclusão, cancelamento e rodízio).</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end max-w-2xl">
+                                <div>
+                                    <label for="auditShiftDate" class="block text-xs font-bold text-slate-700 mb-1">Data de início do plantão</label>
+                                    <input id="auditShiftDate" type="date" class="w-full p-2.5 border border-slate-300 rounded-lg bg-white">
+                                </div>
+                                <button type="button" onclick="gerarAuditoriaPlantaoUI()" id="btnAuditShift" class="w-full bg-indigo-700 hover:bg-indigo-800 disabled:opacity-60 text-white font-bold px-4 py-2.5 rounded-lg">Executar auditoria do plantão</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -567,6 +579,15 @@
                     </div>
                     <p class="text-xs text-slate-500 mb-3">A tabela mostra os campos disponíveis no retorno do Apps Script. Confira se correspondem a todas as colunas exigidas pelo documento mensal oficial.</p>
                     <div id="monthlyReportTableWrap" class="overflow-x-auto"></div>
+                </div>
+
+                <div id="auditShiftResult" class="hidden bg-white rounded-xl shadow-md p-6 border border-slate-200">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                        <div><h3 class="font-bold text-lg text-slate-900">Auditoria do plantão</h3><p id="auditShiftMeta" class="text-xs text-slate-500 mt-1"></p></div>
+                        <button type="button" onclick="baixarAuditoriaPlantaoCSV()" class="bg-indigo-700 hover:bg-indigo-800 text-white font-bold px-4 py-2 rounded-lg text-sm">Baixar CSV</button>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-3">Cada linha é um chamado com pelo menos uma inconformidade. A coluna <strong>Inconformidades_Encontradas</strong> mostra todos os erros do chamado e <strong>Qtd_Erros</strong> mostra o total.</p>
+                    <div id="auditShiftTableWrap" class="overflow-x-auto"></div>
                 </div>
                 </div><!-- /rep-sub-prontos -->
 
@@ -1390,6 +1411,7 @@
             const dataLocal = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0') + '-' + String(hoje.getDate()).padStart(2, '0');
             const mesLocal = dataLocal.slice(0, 7);
             if (document.getElementById('reportDailyDate')) document.getElementById('reportDailyDate').value = dataLocal;
+            if (document.getElementById('auditShiftDate')) document.getElementById('auditShiftDate').value = dataLocal;
             if (document.getElementById('reportMonth')) document.getElementById('reportMonth').value = mesLocal;
             if (document.getElementById('reportAllMonth')) document.getElementById('reportAllMonth').value = mesLocal;
         }
@@ -2359,6 +2381,107 @@
             const csv = '\uFEFF' + [headers, ...rows.map(row => headers.map(h => row[h] ?? ''))].map(row => row.map(csvEscapeRelatorio).join(';')).join('\r\n');
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = (relatorioMensalAtual.todos ? 'relatorio_ocorrencias_' : 'relatorio_CISUs_') + month + '.csv'; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(link.href);
+        }
+
+        // ==========================================
+        // AUDITORIA POR PLANTÃO (08:00 às 08:00)
+        // ==========================================
+        let auditoriaPlantaoAtual = { colunas: [], linhas: [], data: '' };
+
+        function audPlantaoDataBR(iso) {
+            const p = String(iso || '').split('-');
+            return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : String(iso || '');
+        }
+
+        function audPlantaoProximoDia(iso) {
+            const p = String(iso || '').split('-').map(Number);
+            if (p.length !== 3 || p.some(n => !isFinite(n))) return '';
+            const d = new Date(p[0], p[1] - 1, p[2] + 1);
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        async function gerarAuditoriaPlantaoUI() {
+            const btn = document.getElementById('btnAuditShift');
+            const data = document.getElementById('auditShiftDate').value;
+            if (!data) { mostrarStatusRelatorios('Selecione a data de início do plantão para a auditoria.', 'erro'); return; }
+            let base; try { base = obterBaseAppsScriptRelatorios(); } catch (e) { mostrarStatusRelatorios(e.message, 'erro'); return; }
+            btn.disabled = true; btn.textContent = 'Auditando plantão...';
+            document.getElementById('auditShiftResult').classList.add('hidden');
+            try {
+                const url = new URL(base);
+                url.searchParams.set('acao', 'auditoria');
+                url.searchParams.set('plantao', '1');
+                url.searchParams.set('data', data);
+                const response = await fetch(url.toString());
+                if (!response.ok) throw new Error('Falha HTTP ' + response.status);
+                const result = await response.json();
+                if (!result.encontrado) throw new Error(result.erro || 'O Apps Script não conseguiu executar a auditoria do plantão.');
+
+                auditoriaPlantaoAtual = {
+                    colunas: Array.isArray(result.colunas) ? result.colunas : [],
+                    linhas: Array.isArray(result.linhas) ? result.linhas : [],
+                    data: data
+                };
+                renderizarAuditoriaPlantao();
+
+                const diag = result.diagnostico || {};
+                const inicioTxt = result.plantao_inicio || (audPlantaoDataBR(data) + ' 08:00');
+                const fimTxt = result.plantao_fim || (audPlantaoDataBR(audPlantaoProximoDia(data)) + ' 08:00');
+                const partes = [];
+                partes.push('Plantão: ' + inicioTxt + ' até ' + fimTxt);
+                partes.push(auditoriaPlantaoAtual.linhas.length + ' chamado(s) com inconformidade');
+                partes.push((Number(result.varridos) || 0) + ' conversa(s) criada(s) no plantão');
+                if (Number(diag.conversas_sem_atributos_auditoria || 0) > 0) {
+                    partes.push(Number(diag.conversas_sem_atributos_auditoria) + ' conversa(s) sem atributos completos');
+                }
+                document.getElementById('auditShiftMeta').textContent = partes.join(' • ');
+                document.getElementById('auditShiftResult').classList.remove('hidden');
+
+                const avisos = [];
+                if (result.truncado === true) avisos.push('a busca atingiu o limite de páginas');
+                if (Number(diag.conversas_sem_atributos_auditoria || 0) > 0) avisos.push('algumas conversas vieram sem os atributos de auditoria');
+                mostrarStatusRelatorios(
+                    avisos.length
+                        ? 'Auditoria do plantão concluída com avisos: ' + avisos.join(' • ') + '. Confira o resultado antes de usar.'
+                        : 'Auditoria do plantão concluída: ' + auditoriaPlantaoAtual.linhas.length + ' chamado(s) com inconformidade em ' + (Number(result.varridos) || 0) + ' conversa(s).',
+                    avisos.length ? 'erro' : 'sucesso'
+                );
+            } catch (e) {
+                mostrarStatusRelatorios('Não foi possível executar a auditoria do plantão: ' + e.message, 'erro');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Executar auditoria do plantão';
+            }
+        }
+
+        function renderizarAuditoriaPlantao() {
+            const wrap = document.getElementById('auditShiftTableWrap');
+            const { colunas, linhas } = auditoriaPlantaoAtual;
+            if (!linhas.length) {
+                wrap.innerHTML = '<p class="text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg p-4">Nenhuma inconformidade encontrada nos chamados criados neste plantão.</p>';
+                return;
+            }
+            const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            const th = colunas.map(c => '<th class="p-2 border whitespace-nowrap text-left">' + esc(String(c).replace(/_/g, ' ')) + '</th>').join('');
+            const tr = linhas.map(l => '<tr class="odd:bg-white even:bg-slate-50">' + colunas.map(c => {
+                const classe = c === 'Qtd_Erros' ? 'text-right whitespace-nowrap' : (c === 'Inconformidades_Encontradas' ? 'min-w-[18rem]' : 'whitespace-nowrap');
+                return '<td class="p-2 border align-top ' + classe + '">' + esc(l[c] ?? '') + '</td>';
+            }).join('') + '</tr>').join('');
+            wrap.innerHTML = '<div class="overflow-auto max-h-[32rem] border border-slate-200 rounded-lg"><table class="min-w-full text-xs border-collapse"><thead class="sticky top-0"><tr class="bg-slate-800 text-white">' + th + '</tr></thead><tbody>' + tr + '</tbody></table></div>';
+        }
+
+        function baixarAuditoriaPlantaoCSV() {
+            const { colunas, linhas, data } = auditoriaPlantaoAtual;
+            if (!colunas.length) { mostrarStatusRelatorios('Execute a auditoria do plantão antes de baixar o CSV.', 'erro'); return; }
+            const csv = '\uFEFF' + [colunas, ...linhas.map(l => colunas.map(c => l[c] ?? ''))]
+                .map(row => row.map(csvEscapeRelatorio).join(';')).join('\r\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'auditoria_plantao_' + data + '.csv';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(link.href);
         }
 
         // ==========================================
