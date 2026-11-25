@@ -602,7 +602,7 @@
                             </div>
                             <span class="inline-flex w-fit items-center rounded-full bg-emerald-100 text-emerald-800 px-3 py-1 text-xs font-bold">SEM SQL</span>
                         </div>
-                        <p class="text-xs text-slate-500 mb-4">As consultas leem os chamados pela API do Chatwoot. O período é obrigatório e vale como filtro principal (data de conclusão ou data da ocorrência, conforme a consulta).</p>
+                        <p class="text-xs text-slate-500 mb-4">As consultas leem os chamados pela API do Chatwoot. O período é obrigatório e vale como filtro principal (data de conclusão ou data da ocorrência, conforme a consulta). Nos relatórios <strong>AGRASE</strong>, você pode escolher se o período vale pela <strong>data de início</strong> ou pela <strong>data de conclusão</strong>.</p>
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                             <div>
                                 <label for="dbDateStart" class="block text-xs font-bold text-slate-700 mb-1">Data inicial</label>
@@ -2929,13 +2929,22 @@
             const obs = r.id === 'dossie'
                 ? '<p class="text-[11px] text-amber-700 mt-1">Informe o Nº do chamado no campo “Nº do chamado” acima.</p>'
                 : '';
+            const criterio = r.criterio_periodo
+                ? '<div class="mt-2">' +
+                    '<label for="dbCriterio_' + repEsc(r.id) + '" class="block text-[10px] font-bold text-slate-600 mb-1">Critério do período</label>' +
+                    '<select id="dbCriterio_' + repEsc(r.id) + '" class="w-full p-2 border border-slate-300 rounded-lg bg-white text-xs">' +
+                        '<option value="inicio">Iniciadas no período (padrão)</option>' +
+                        '<option value="conclusao">Finalizadas no período (como no banco)</option>' +
+                    '</select>' +
+                  '</div>'
+                : '';
             return '<div class="rounded-xl border border-slate-200 p-4 flex flex-col justify-between gap-3 bg-slate-50/60">' +
                 '<div>' +
                 '<div class="flex items-start justify-between gap-2">' +
                 '<h4 class="font-bold text-slate-900 text-sm">' + repEsc(r.nome) + '</h4>' +
                 (r.requer_periodo ? '<span class="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full whitespace-nowrap">PERÍODO</span>' : '') +
                 '</div>' +
-                '<p class="text-xs text-slate-600 mt-1">' + repEsc(r.descricao) + '</p>' + obs +
+                '<p class="text-xs text-slate-600 mt-1">' + repEsc(r.descricao) + '</p>' + obs + criterio +
                 '</div>' +
                 '<button type="button" onclick="repExecutarBanco(\'' + repEsc(r.id) + '\')" class="rep-db-run bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-bold px-4 py-2 rounded-lg text-sm">Executar consulta</button>' +
                 '</div>';
@@ -3021,6 +3030,8 @@
             const rel = rels.filter(r => r.id === id)[0] || { id: id, nome: id };
             const ini = document.getElementById('dbDateStart').value;
             const fim = document.getElementById('dbDateEnd').value;
+            const seletorCriterio = document.getElementById('dbCriterio_' + id);
+            const criterio = seletorCriterio ? seletorCriterio.value : '';
             let conversa = '';
             if (rel.requer_periodo && (!ini || !fim || ini > fim)) {
                 repStatus('dbReportStatus', 'Informe um período válido (data inicial e data final).', 'erro');
@@ -3037,7 +3048,7 @@
             repStatusOcupado('dbReportStatus', 'Executando “' + (rel.nome || id) + '” no Chatwoot');
             document.querySelectorAll('#dbReportsList .rep-db-run').forEach(function (b) { b.disabled = true; });
             try {
-                const dados = await repGet('executar_relatorio', { id: id, inicio: ini, fim: fim, conversa: conversa });
+                const dados = await repGet('executar_relatorio', { id: id, inicio: ini, fim: fim, conversa: conversa, criterio: criterio });
                 REP_STATE.resultados.db = dados;
                 repRenderResultado('db', dados);
                 repStatusParar('dbReportStatus', 'Consulta concluída: ' + repContarLinhas(dados) + ' linha(s) exibida(s).', 'sucesso');
