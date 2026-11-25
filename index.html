@@ -3495,6 +3495,113 @@
             return s || 'NÃO INFORMADA';
         }
 
+        let dashRespEnriquecendo = false;
+
+        function dashRespVazia(valor) {
+            if (normalizaResponsabilidade(valor)) return false;
+            const s = String(valor || '').trim().toUpperCase();
+            return !s || s === 'NÃO INFORMADA' || s === 'NAO INFORMADA';
+        }
+
+        function dashChatwootIdNumerico(valor) {
+            const id = String(valor || '').replace(/\D+/g, '');
+            return id || '';
+        }
+
+        // A coluna de responsabilidade da planilha fica vazia em registros antigos,
+        // mesmo quando o chamado tem a informação no Chatwoot. Aqui completamos
+        // esses casos em lote pela rota acao=responsabilidades do Apps Script.
+        async function enriquecerResponsabilidadesDashboard() {
+            if (dashRespEnriquecendo) return 0;
+
+            const loteAtual = dashRegistros;
+            const pendentes = loteAtual.filter(function (d) {
+                return dashRespVazia(d.responsabilidade_operacional) &&
+                    dashChatwootIdNumerico(d.chatwoot_id) &&
+                    !d._respConsultada;
+            });
+            if (!pendentes.length) return 0;
+
+            let base;
+            try { base = obterBaseAppsScriptRelatorios(); } catch (e) { return 0; }
+
+            const status = document.getElementById('dashAtualizadoEm');
+            const ids = [];
+            const vistos = {};
+            pendentes.forEach(function (d) {
+                const id = dashChatwootIdNumerico(d.chatwoot_id);
+                if (vistos[id]) return;
+                vistos[id] = true;
+                ids.push(id);
+            });
+
+            dashRespEnriquecendo = true;
+            if (status) status.textContent = 'Completando responsabilidades pelo Chatwoot… 0 de ' + ids.length + ' chamado(s)';
+
+            const mapa = {};
+            const consultados = {};
+            let processados = 0;
+            let recuperados = 0;
+
+            try {
+                for (let i = 0; i < ids.length; i += 100) {
+                    const lote = ids.slice(i, i + 100);
+                    const url = new URL(base);
+                    url.searchParams.set('acao', 'responsabilidades');
+                    url.searchParams.set('ids', lote.join(','));
+                    url.searchParams.set('_', String(Date.now()));
+                    const resp = await fetch(url.toString());
+                    if (!resp.ok) throw new Error('Falha HTTP ' + resp.status);
+                    const dados = await resp.json();
+                    if (!dados.encontrado) throw new Error(dados.erro || 'Consulta de responsabilidades indisponível.');
+
+                    const recebidas = dados.mapa || {};
+                    lote.forEach(function (id) {
+                        consultados[id] = true;
+                        if (recebidas[id]) mapa[id] = recebidas[id];
+                    });
+                    processados += lote.length;
+
+                    // Aplica o lote assim que ele chega: os gráficos vão sendo corrigidos aos poucos.
+                    let mudou = false;
+                    pendentes.forEach(function (d) {
+                        if (d._respConsultada) return;
+                        const id = dashChatwootIdNumerico(d.chatwoot_id);
+                        if (!consultados[id]) return;
+                        d._respConsultada = true;
+                        const valor = normalizaResponsabilidade(mapa[id]);
+                        if (valor) {
+                            d.responsabilidade_operacional = valor;
+                            d._respRecuperada = true;
+                            recuperados++;
+                            mudou = true;
+                        }
+                    });
+                    if (mudou) renderDashboard();
+
+                    if (status) status.textContent = 'Completando responsabilidades pelo Chatwoot… ' + processados + ' de ' + ids.length + ' chamado(s)';
+                }
+            } catch (e) {
+                // Mantém o que já foi recuperado; os que falharam serão tentados na próxima atualização.
+            } finally {
+                dashRespEnriquecendo = false;
+            }
+
+            if (status) {
+                const complemento = recuperados ? ' • ' + recuperados + ' responsabilidade(s) completada(s) pelo Chatwoot' : '';
+                if (status.textContent.indexOf('Completando responsabilidades') === 0) {
+                    status.textContent = 'Atualizado em ' + new Date().toLocaleString('pt-BR') + ' • ' + loteAtual.length + ' registro(s) lido(s) da planilha' + complemento;
+                } else if (complemento && status.textContent.indexOf('responsabilidade(s) completada(s)') === -1) {
+                    status.textContent += complemento;
+                }
+            }
+
+            // Uma nova carga pode ter chegado enquanto a consulta rodava: completa a nova lista também.
+            if (dashRegistros !== loteAtual) enriquecerResponsabilidadesDashboard();
+
+            return recuperados;
+        }
+
         async function carregarRegistrosDaPlanilha(opcoes = {}) {
             if (dashCarregando && !opcoes.forcar) return;
             const campoUrl = document.getElementById('appscript_url');
@@ -3522,8 +3629,10 @@
                 renderTable();
                 renderDashboard();
                 if (status) {
-                    status.textContent = 'Atualizado em ' + new Date().toLocaleString('pt-BR') + ' • ' + dashRegistros.length + ' registro(s) lido(s) da planilha' + (dados.truncado ? ' (limite de linhas atingido)' : '');
+                    const recuperadas = dashRegistros.filter(d => d._respRecuperada).length;
+                    status.textContent = 'Atualizado em ' + new Date().toLocaleString('pt-BR') + ' • ' + dashRegistros.length + ' registro(s) lido(s) da planilha' + (dados.truncado ? ' (limite de linhas atingido)' : '') + (recuperadas ? ' • ' + recuperadas + ' responsabilidade(s) completada(s) pelo Chatwoot' : '');
                 }
+                enriquecerResponsabilidadesDashboard();
             } catch (e) {
                 if (status) status.textContent = 'Não foi possível ler a planilha: ' + e.message;
             } finally {
