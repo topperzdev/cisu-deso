@@ -111,6 +111,7 @@
                 <button onclick="switchTab('dash-tab')" id="btn-dash-tab" class="px-4 py-2 text-sm font-medium rounded-md text-blue-200 hover:text-white transition">📈 Dashboard Gerencial</button>
                 <button onclick="switchTab('reports-tab')" id="btn-reports-tab" class="px-4 py-2 text-sm font-medium rounded-md text-blue-200 hover:text-white transition">📑 Criação de Relatórios</button>
                 <button onclick="switchTab('permissoes-tab')" id="btn-permissoes-tab" class="hidden px-4 py-2 text-sm font-medium rounded-md text-blue-200 hover:text-white transition">🔐 Permissões</button>
+                <button type="button" onclick="toggleConexaoBox()" class="px-4 py-2 text-sm font-medium rounded-md text-blue-200 hover:text-white transition" title="Configurar e testar a conexão com o Apps Script">⚙️ Conexão</button>
             </nav>
             <div id="user_box" class="hidden items-center gap-3 text-xs text-blue-100">
                 <span id="user_nome" class="font-semibold"></span>
@@ -121,12 +122,16 @@
 
     <main class="max-w-7xl mx-auto p-4 md:p-6">
 
-        <div class="hidden bg-amber-50 border border-amber-300 rounded-xl p-4 mb-6 shadow-sm no-print">
+        <div id="conexaoBox" class="hidden bg-amber-50 border border-amber-300 rounded-xl p-4 mb-6 shadow-sm no-print">
             <label class="block text-xs font-bold text-amber-900 mb-1 uppercase tracking-wider">⚙️ Configuração de Conexão com a Planilha Central (Google Apps Script URL)</label>
             <div class="flex flex-col md:flex-row gap-2">
                 <input type="url" id="appscript_url" placeholder="Cole aqui a URL gerada no Google Apps Script (https://script.google.com/macros/s/.../exec)" class="w-full text-xs p-2 border border-amber-400 rounded outline-none focus:ring-2 focus:ring-amber-500 bg-white font-mono">
                 <button type="button" onclick="saveAppScriptUrl()" class="bg-amber-700 hover:bg-amber-800 text-white font-bold px-4 py-2 rounded text-xs transition whitespace-nowrap">Salvar URL Conexão</button>
+                <button type="button" onclick="testarConexaoAppScript()" class="bg-blue-700 hover:bg-blue-800 text-white font-bold px-4 py-2 rounded text-xs transition whitespace-nowrap">🔌 Testar conexão</button>
+                <button type="button" onclick="restaurarUrlPadrao()" class="bg-white hover:bg-amber-100 text-amber-900 border border-amber-400 font-bold px-4 py-2 rounded text-xs transition whitespace-nowrap">↩️ Restaurar padrão</button>
             </div>
+            <p class="text-[11px] text-amber-800 mt-2">A URL correta começa com <span class="font-mono">https://script.google.com/macros/s/</span> e termina em <span class="font-mono">/exec</span>. Depois de salvar, teste a conexão e recarregue com <strong>Ctrl+F5</strong>.</p>
+            <div id="connStatus" class="hidden mt-2 text-xs rounded-lg border p-2"></div>
         </div>
 
         <!-- TAB 1: FORMULÁRIO DE ENTRADA -->
@@ -503,7 +508,11 @@
                         <button type="button" id="rep-sub-btn-banco" onclick="switchReportSub('banco')" class="rep-sub-btn px-4 py-2 rounded-lg text-sm font-bold border border-slate-300 bg-white text-slate-700 hover:bg-slate-100">🗄️ Consultas do banco</button>
                         <button type="button" id="rep-sub-btn-builder" onclick="switchReportSub('builder')" class="rep-sub-btn px-4 py-2 rounded-lg text-sm font-bold border border-slate-300 bg-white text-slate-700 hover:bg-slate-100">🛠️ Criar consulta</button>
                     </div>
-                    <p id="repAvisoPermissao" class="hidden mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">🔒 As consultas do banco e a criação de consultas estão liberadas apenas para usuários autorizados. Fale com o administrador se precisar de acesso.</p>
+                    <div id="repAvisoPermissao" class="hidden mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <p>🔒 As consultas do banco e a criação de consultas estão liberadas apenas para usuários autorizados. Fale com o administrador se precisar de acesso.</p>
+                        <p id="repAvisoPermissaoDetalhe" class="hidden mt-1 font-mono text-[11px] text-amber-900"></p>
+                        <button type="button" onclick="toggleConexaoBox()" class="mt-2 bg-amber-700 hover:bg-amber-800 text-white font-bold px-3 py-1.5 rounded text-[11px]">⚙️ Testar conexão / ver URL</button>
+                    </div>
                 </div>
 
                 <div id="rep-sub-prontos" class="space-y-6">
@@ -646,9 +655,9 @@
                         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-2">
                             <div>
                                 <h2 class="text-xl font-bold text-slate-900">Criar consulta</h2>
-                                <p class="text-sm text-slate-500 mt-1">Monte a consulta escolhendo campos, filtros e agrupamentos. Não é necessário digitar SQL.</p>
+                                <p class="text-sm text-slate-500 mt-1">Monte a consulta no modo visual ou escreva um SQL simples. O SQL é traduzido para os filtros do Chatwoot — não é um banco SQL real.</p>
                             </div>
-                            <span class="inline-flex w-fit items-center rounded-full bg-blue-100 text-blue-800 px-3 py-1 text-xs font-bold">CONSTRUTOR</span>
+                            <span class="inline-flex w-fit items-center rounded-full bg-blue-100 text-blue-800 px-3 py-1 text-xs font-bold">CONSTRUTOR / SQL</span>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
@@ -677,6 +686,12 @@
                             </div>
                         </div>
 
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <button type="button" id="builderModeVisual" onclick="builderModo('visual')" class="bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-sm">🧱 Modo visual</button>
+                            <button type="button" id="builderModeSql" onclick="builderModo('sql')" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold px-4 py-2 rounded-lg text-sm">💻 Modo SQL</button>
+                        </div>
+
+                        <div id="builderVisual">
                         <div class="rounded-xl border border-slate-200 p-4 mb-4">
                             <div class="flex items-center justify-between gap-2 mb-2">
                                 <h3 class="font-bold text-slate-900 text-sm">Filtros</h3>
@@ -737,6 +752,49 @@
                             <button type="button" onclick="builderNova()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-5 py-2.5 rounded-lg">Nova / limpar</button>
                             <span id="builderEditingHint" class="hidden self-center text-xs font-bold text-amber-700"></span>
                         </div>
+                        </div><!-- /builderVisual -->
+
+                        <div id="builderSql" class="hidden space-y-4">
+                            <div class="rounded-xl border border-indigo-200 bg-indigo-50/40 p-4">
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                                    <h3 class="font-bold text-slate-900 text-sm">Consulta SQL</h3>
+                                    <span class="inline-flex w-fit items-center rounded-full bg-indigo-100 text-indigo-800 px-2 py-0.5 text-[10px] font-bold">TRADUZIDA PARA A API</span>
+                                </div>
+                                <p class="text-xs text-slate-600 mb-2">Escreva um <code>SELECT</code> sobre a tabela <code>chamados</code>. O período escolhido acima é aplicado automaticamente pelo campo de data selecionado.</p>
+                                <textarea id="builderSqlText" rows="10" spellcheck="false" class="w-full p-3 border border-slate-300 rounded-lg bg-white font-mono text-xs" placeholder="SELECT gerencia, COUNT(*) AS total&#10;FROM chamados&#10;WHERE status = 'resolvido'&#10;GROUP BY gerencia&#10;ORDER BY total DESC&#10;LIMIT 20"></textarea>
+                                <div class="flex flex-wrap gap-2 mt-3">
+                                    <button type="button" onclick="builderSqlExemplo('agrupado')" class="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs">Exemplo: por gerência</button>
+                                    <button type="button" onclick="builderSqlExemplo('filtro')" class="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs">Exemplo: filtro + colunas</button>
+                                    <button type="button" onclick="builderSqlExemplo('total')" class="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs">Exemplo: total geral</button>
+                                    <button type="button" onclick="builderSqlExemplo('colunas')" class="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs">Exemplo: listagem</button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <div class="rounded-xl border border-slate-200 p-4">
+                                    <h3 class="font-bold text-slate-900 text-sm mb-1">Campos disponíveis</h3>
+                                    <p class="text-xs text-slate-500 mb-2">Use o nome técnico (primeira coluna).</p>
+                                    <div id="builderSqlCampos" class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 max-h-64 overflow-y-auto pr-1"></div>
+                                </div>
+                                <div class="rounded-xl border border-slate-200 p-4">
+                                    <h3 class="font-bold text-slate-900 text-sm mb-1">O que o modo SQL aceita</h3>
+                                    <ul class="text-xs text-slate-600 space-y-1 list-disc pl-4">
+                                        <li><code>SELECT</code> de campos ou <code>COUNT/SUM/AVG/MIN/MAX</code> com <code>AS apelido</code>.</li>
+                                        <li><code>WHERE</code> com <code>=</code>, <code>&lt;&gt;</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>, <code>LIKE</code>, <code>IN</code>, <code>BETWEEN</code>, <code>IS NULL</code>, <code>AND</code>, <code>OR</code>, <code>NOT</code> e parênteses.</li>
+                                        <li><code>GROUP BY</code> com um campo, <code>ORDER BY</code> e <code>LIMIT</code> até 5000.</li>
+                                        <li>Sem <code>JOIN</code>, subconsultas ou <code>HAVING</code>.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" id="btnSqlValidate" onclick="builderSqlValidar()" class="bg-slate-700 hover:bg-slate-800 disabled:opacity-60 text-white font-bold px-5 py-2.5 rounded-lg">Validar SQL</button>
+                                <button type="button" id="btnSqlRun" onclick="builderSqlExecutar()" class="bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-bold px-5 py-2.5 rounded-lg">Executar SQL</button>
+                                <button type="button" id="btnSqlSave" onclick="builderSqlSalvar()" class="bg-emerald-700 hover:bg-emerald-800 disabled:opacity-60 text-white font-bold px-5 py-2.5 rounded-lg">Salvar consulta SQL</button>
+                                <button type="button" onclick="builderSqlNova()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-5 py-2.5 rounded-lg">Nova / limpar</button>
+                                <span id="builderSqlEditingHint" class="hidden self-center text-xs font-bold text-amber-700"></span>
+                            </div>
+                        </div><!-- /builderSql -->
                     </div>
 
                     <div id="builderStatus" class="hidden rounded-lg p-4 text-sm border" role="status" aria-live="polite"></div>
@@ -1346,7 +1404,7 @@
         const GOOGLE_CLIENT_ID = '241593672873-ov3s5rb7nv56ij0kvpvmiu3teb5c46ko.apps.googleusercontent.com';
         const DOMINIO_PERMITIDO = 'deso-se.com.br';
         let usuarioLogado = null;
-        let permissoesUsuario = { consultasBanco: false, carregado: false };
+        let permissoesUsuario = { consultasBanco: false, carregado: false, erro: '' };
         let permissoesListaCarregada = false;
 
         function decodificarJwt(token) {
@@ -1436,6 +1494,15 @@
             const aviso = document.getElementById('repAvisoPermissao');
             if (aviso) aviso.classList.toggle('hidden', !restrito);
 
+            // Mostra o motivo real quando o carregamento das permissões falhou
+            // (rede, sessão expirada, usuário sem acesso etc.).
+            const detalhe = document.getElementById('repAvisoPermissaoDetalhe');
+            if (detalhe) {
+                const motivo = String(permissoesUsuario.erro || '');
+                detalhe.textContent = motivo ? 'Motivo: ' + motivo : '';
+                detalhe.classList.toggle('hidden', !restrito || !motivo);
+            }
+
             // A aba de administração só aparece para quem já tem acesso às consultas.
             const btnPermissoes = document.getElementById('btn-permissoes-tab');
             if (btnPermissoes) btnPermissoes.classList.toggle('hidden', !permitido);
@@ -1457,7 +1524,7 @@
         }
 
         async function carregarPermissoes() {
-            permissoesUsuario = { consultasBanco: false, carregado: false };
+            permissoesUsuario = { consultasBanco: false, carregado: false, erro: '' };
             permissoesListaCarregada = false;
 
             const campoUrl = document.getElementById('appscript_url');
@@ -1471,8 +1538,10 @@
                 if (!resp.ok) throw new Error('Falha HTTP ' + resp.status);
                 const dados = await resp.json();
                 permissoesUsuario.consultasBanco = !!(dados && dados.encontrado && dados.consultas_banco);
+                if (dados && dados.encontrado === false && dados.erro) permissoesUsuario.erro = String(dados.erro);
             } catch (e) {
                 permissoesUsuario.consultasBanco = false;
+                permissoesUsuario.erro = descreverFalhaDeRede(e);
             }
 
             permissoesUsuario.carregado = true;
@@ -1689,19 +1758,127 @@
 
         const APPSCRIPT_URL_PADRAO = 'https://script.google.com/macros/s/AKfycbz6rP4CDTwikplVHRqvOw0vtQ9FtzDNO3SHWpvd7Icj5zai4N8Zxv_scu0FqqBUt4nr/exec';
 
+        // A URL de implantação do Apps Script sempre tem este formato.
+        function urlAppsScriptValida(url) {
+            return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/i.test(String(url || '').trim().split('?')[0]);
+        }
+
         function saveAppScriptUrl() {
-            const url = document.getElementById('appscript_url').value.trim();
-            if (url) {
-                localStorage.setItem('cisu_appscript_url', url);
-                alert("URL do Google Apps Script salva com sucesso no navegador!");
-            } else {
-                alert("Por favor, cole uma URL válida do Apps Script.");
+            const url = document.getElementById('appscript_url').value.trim().split('?')[0];
+            if (!urlAppsScriptValida(url)) {
+                alert("URL inválida. Cole a URL da implantação do Apps Script, que começa com https://script.google.com/macros/s/ e termina em /exec.");
+                return;
+            }
+            localStorage.setItem('cisu_appscript_url', url);
+            document.getElementById('appscript_url').value = url;
+            alert("URL do Google Apps Script salva com sucesso no navegador!");
+            if (typeof carregarPermissoes === 'function') carregarPermissoes();
+        }
+
+        function restaurarUrlPadrao() {
+            try { localStorage.removeItem('cisu_appscript_url'); } catch (e) { /* localStorage indisponível */ }
+            const campo = document.getElementById('appscript_url');
+            if (campo) campo.value = APPSCRIPT_URL_PADRAO;
+            mostrarStatusConexao('URL padrão restaurada. Clique em <strong>Salvar URL Conexão</strong> e recarregue a página com <strong>Ctrl+F5</strong>.', 'sucesso');
+        }
+
+        function toggleConexaoBox() {
+            const box = document.getElementById('conexaoBox');
+            if (!box) return;
+            box.classList.toggle('hidden');
+            if (!box.classList.contains('hidden')) {
+                try { box.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* navegador antigo */ }
+                const campo = document.getElementById('appscript_url');
+                if (campo) campo.focus();
+            }
+        }
+
+        function mostrarStatusConexao(msg, tipo) {
+            const el = document.getElementById('connStatus');
+            if (!el) return;
+            el.classList.remove('hidden', 'bg-blue-50', 'border-blue-200', 'text-blue-800', 'bg-red-50', 'border-red-200', 'text-red-800', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-800', 'bg-amber-50', 'border-amber-200', 'text-amber-800');
+            const cls = tipo === 'erro'
+                ? ['bg-red-50', 'border-red-200', 'text-red-800']
+                : tipo === 'sucesso'
+                    ? ['bg-emerald-50', 'border-emerald-200', 'text-emerald-800']
+                    : tipo === 'aviso'
+                        ? ['bg-amber-50', 'border-amber-200', 'text-amber-800']
+                        : ['bg-blue-50', 'border-blue-200', 'text-blue-800'];
+            el.classList.add(...cls);
+            el.innerHTML = msg;
+        }
+
+        // Traduz erros de rede do navegador em uma orientação útil.
+        function descreverFalhaDeRede(e) {
+            const nome = String((e && e.name) || '');
+            const msg = String((e && e.message) || e || '');
+            if (nome === 'AbortError') {
+                return 'A conexão demorou mais de 15 segundos e foi cancelada. Verifique internet, VPN/proxy ou firewall da rede.';
+            }
+            if (/failed to fetch|networkerror|load failed|fetch failed|network request failed/i.test(msg) || nome === 'TypeError') {
+                return 'O navegador não conseguiu falar com script.google.com. Isso normalmente é rede, VPN/proxy/firewall, extensão (bloqueador de anúncios) ou URL errada. Teste em uma aba anônima e, se possível, em outra rede.';
+            }
+            return msg || 'Falha desconhecida de conexão.';
+        }
+
+        async function testarConexaoAppScript() {
+            const campo = document.getElementById('appscript_url');
+            const informada = (campo && campo.value.trim()) || APPSCRIPT_URL_PADRAO;
+            const base = informada.split('?')[0];
+
+            if (!urlAppsScriptValida(base)) {
+                mostrarStatusConexao('❌ URL inválida. Ela precisa começar com <span class="font-mono">https://script.google.com/macros/s/</span> e terminar em <span class="font-mono">/exec</span>.', 'erro');
+                return;
+            }
+
+            mostrarStatusConexao('⏳ Testando a conexão com o Apps Script…', 'info');
+
+            const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 15000) : null;
+
+            try {
+                const url = new URL(base);
+                url.searchParams.set('acao', 'permissoes');
+                const token = obterTokenLogin();
+                if (token) url.searchParams.set('token', token);
+                url.searchParams.set('_', String(Date.now()));
+
+                // Usa o fetch original para o teste não ser bloqueado pelo interceptor de login.
+                const disparar = (typeof _fetchOriginal === 'function') ? _fetchOriginal : window.fetch.bind(window);
+                const resp = await disparar(url.toString(), ctrl ? { cache: 'no-store', signal: ctrl.signal } : { cache: 'no-store' });
+                const texto = await resp.text();
+                let dados = null;
+                try { dados = JSON.parse(texto); } catch (e) { dados = null; }
+
+                if (!dados) {
+                    mostrarStatusConexao('⚠️ A URL respondeu (HTTP ' + resp.status + '), mas não devolveu JSON. Provavelmente é uma URL antiga/errada ou uma página de login do Google. Copie novamente a URL da implantação que termina em <span class="font-mono">/exec</span>.', 'aviso');
+                    return;
+                }
+                if (dados.encontrado) {
+                    mostrarStatusConexao('✅ Conexão OK! O Apps Script respondeu e a sessão foi aceita' + (dados.email ? ' (' + repEsc(dados.email) + ')' : '') + '. Consultas do banco: ' + (dados.consultas_banco ? 'liberadas' : 'bloqueadas para este usuário') + '.', 'sucesso');
+                    return;
+                }
+                if (/não autorizado|nao autorizado|faça login|faca login/i.test(String(dados.erro || ''))) {
+                    mostrarStatusConexao('✅ Conexão OK! O Apps Script respondeu. Agora faça login com sua conta @deso-se.com.br para liberar as consultas.', 'aviso');
+                    return;
+                }
+                const motivo = String(dados.erro || 'erro não informado').replace(/[.\s]+$/, '');
+                mostrarStatusConexao('✅ Conexão OK! O Apps Script respondeu, mas recusou a sessão: ' + repEsc(motivo) + '.', 'aviso');
+            } catch (e) {
+                mostrarStatusConexao('❌ ' + repEsc(descreverFalhaDeRede(e)), 'erro');
+            } finally {
+                if (timer) clearTimeout(timer);
             }
         }
 
         function loadAppScriptUrl() {
-            const salva = localStorage.getItem('cisu_appscript_url');
-            document.getElementById('appscript_url').value = (salva && salva.trim()) || APPSCRIPT_URL_PADRAO;
+            let salva = '';
+            try { salva = (localStorage.getItem('cisu_appscript_url') || '').trim().split('?')[0]; } catch (e) { salva = ''; }
+            if (salva && !urlAppsScriptValida(salva)) {
+                try { localStorage.removeItem('cisu_appscript_url'); } catch (e) { /* localStorage indisponível */ }
+                salva = '';
+            }
+            document.getElementById('appscript_url').value = salva || APPSCRIPT_URL_PADRAO;
             const hoje = new Date();
             const dataLocal = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0') + '-' + String(hoje.getDate()).padStart(2, '0');
             const mesLocal = dataLocal.slice(0, 7);
@@ -2788,6 +2965,7 @@
             resultados: { db: null, builder: null },
             inicializado: false,
             subAtual: 'prontos',
+            modoBuilder: 'visual',
             timers: {}
         };
         const REP_COLUNAS_PADRAO = ['protocolo', 'status', 'tipo_ocorrencia', 'gerencia', 'unidade', 'data_inicio', 'data_conclusao', 'duracao', 'responsabilidade'];
@@ -3224,6 +3402,182 @@
             document.querySelectorAll('#builderColumns .builder-col').forEach(function (el) { el.checked = !!marcar; });
         }
 
+        // ==========================================================
+        // MODO SQL: SELECT traduzido para os filtros da API do Chatwoot
+        // ==========================================================
+        function builderModo(modo) {
+            const ehSql = modo === 'sql';
+            const anterior = REP_STATE.modoBuilder || 'visual';
+            const novo = ehSql ? 'sql' : 'visual';
+            const mudou = anterior !== novo;
+            REP_STATE.modoBuilder = novo;
+
+            const visual = document.getElementById('builderVisual');
+            const sql = document.getElementById('builderSql');
+            if (visual) visual.classList.toggle('hidden', ehSql);
+            if (sql) sql.classList.toggle('hidden', !ehSql);
+
+            const btnVisual = document.getElementById('builderModeVisual');
+            const btnSql = document.getElementById('builderModeSql');
+            if (btnVisual) {
+                btnVisual.className = ehSql
+                    ? 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold px-4 py-2 rounded-lg text-sm'
+                    : 'bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-sm';
+            }
+            if (btnSql) {
+                btnSql.className = ehSql
+                    ? 'bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg text-sm'
+                    : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold px-4 py-2 rounded-lg text-sm';
+            }
+
+            /* Trocar de modo manualmente não deve sobrescrever a consulta que
+             * estava sendo editada no outro modo. */
+            if (mudou) {
+                REP_STATE.editando = '';
+                const hintVisual = document.getElementById('builderEditingHint');
+                if (hintVisual) hintVisual.classList.add('hidden');
+                const hintSql = document.getElementById('builderSqlEditingHint');
+                if (hintSql) hintSql.classList.add('hidden');
+            }
+
+            if (ehSql) builderSqlRenderCampos();
+        }
+
+        function builderSqlRenderCampos() {
+            const wrap = document.getElementById('builderSqlCampos');
+            if (!wrap || wrap.dataset.pronto) return;
+            const campos = repCampos();
+            if (!campos.length) {
+                wrap.innerHTML = '<p class="text-xs text-slate-500">Carregue o catálogo para ver os campos disponíveis.</p>';
+                return;
+            }
+            wrap.innerHTML = campos.map(function (c) {
+                return '<div class="text-xs py-0.5"><code class="font-mono text-[11px] text-indigo-800 bg-indigo-50 px-1 rounded">' + repEsc(c.campo) + '</code> <span class="text-slate-500">' + repEsc(c.rotulo) + '</span></div>';
+            }).join('');
+            wrap.dataset.pronto = '1';
+        }
+
+        function builderSqlExemplo(tipo) {
+            const exemplos = {
+                agrupado: "SELECT gerencia, COUNT(*) AS total\nFROM chamados\nWHERE status = 'resolvido'\nGROUP BY gerencia\nORDER BY total DESC\nLIMIT 20",
+                filtro: "SELECT protocolo, status, gerencia, data_conclusao\nFROM chamados\nWHERE gerencia LIKE '%GRSU%' AND status <> 'cancelado'\nORDER BY data_conclusao DESC\nLIMIT 100",
+                total: "SELECT COUNT(*) AS total, AVG(duracao_seg) AS media_segundos\nFROM chamados\nWHERE tipo_ocorrencia = 'Desabastecimento'",
+                colunas: "SELECT protocolo, tipo_ocorrencia, gerencia, unidade, data_inicio, data_conclusao\nFROM chamados\nORDER BY data_conclusao DESC\nLIMIT 200"
+            };
+            const texto = exemplos[tipo];
+            if (!texto) return;
+            const el = document.getElementById('builderSqlText');
+            if (el) { el.value = texto; el.focus(); }
+        }
+
+        function builderSqlColetar() {
+            return {
+                sql: (document.getElementById('builderSqlText').value || '').trim(),
+                nome: (document.getElementById('builderName').value || '').trim(),
+                descricao: (document.getElementById('builderDescription').value || '').trim(),
+                campo_data: document.getElementById('builderDateField').value || 'data_conclusao',
+                data_inicio: document.getElementById('builderDateStart').value,
+                data_fim: document.getElementById('builderDateEnd').value
+            };
+        }
+
+        function builderSqlValidarPeriodo(dados) {
+            if (!dados.data_inicio || !dados.data_fim) return 'Informe a data inicial e a data final.';
+            if (dados.data_inicio > dados.data_fim) return 'A data inicial não pode ser maior que a data final.';
+            return '';
+        }
+
+        async function builderSqlValidar() {
+            const btn = document.getElementById('btnSqlValidate');
+            const dados = builderSqlColetar();
+            if (!dados.sql) { repStatus('builderStatus', 'Digite a consulta SQL antes de validar.', 'erro'); return; }
+            const problemaPeriodo = builderSqlValidarPeriodo(dados);
+            if (problemaPeriodo) { repStatus('builderStatus', problemaPeriodo, 'erro'); return; }
+
+            if (btn) btn.disabled = true;
+            repStatusOcupado('builderStatus', 'Validando o SQL');
+            try {
+                const retorno = await repPost('sql_validar', { sql: dados.sql });
+                repStatusParar('builderStatus', 'SQL válido: ' + (retorno.resumo || 'estrutura reconhecida') + '.', 'sucesso');
+            } catch (e) {
+                repStatusParar('builderStatus', 'SQL inválido: ' + e.message, 'erro');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        async function builderSqlExecutar() {
+            const btn = document.getElementById('btnSqlRun');
+            const dados = builderSqlColetar();
+            if (!dados.sql) { repStatus('builderStatus', 'Digite a consulta SQL antes de executar.', 'erro'); return; }
+            const problemaPeriodo = builderSqlValidarPeriodo(dados);
+            if (problemaPeriodo) { repStatus('builderStatus', problemaPeriodo, 'erro'); return; }
+
+            document.getElementById('builderResult').classList.add('hidden');
+            if (btn) btn.disabled = true;
+            repStatusOcupado('builderStatus', 'Executando o SQL no Chatwoot');
+            try {
+                const retorno = await repPost('sql_executar', dados);
+                REP_STATE.resultados.builder = retorno;
+                repRenderResultado('builder', retorno);
+                repStatusParar('builderStatus', 'Consulta SQL concluída: ' + repContarLinhas(retorno) + ' linha(s).', 'sucesso');
+            } catch (e) {
+                repStatusParar('builderStatus', 'Não foi possível executar o SQL: ' + e.message, 'erro');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        async function builderSqlSalvar() {
+            const btn = document.getElementById('btnSqlSave');
+            const dados = builderSqlColetar();
+            if (!dados.nome) { repStatus('builderStatus', 'Informe um nome para a consulta antes de salvar.', 'erro'); return; }
+            if (!dados.sql) { repStatus('builderStatus', 'Digite a consulta SQL antes de salvar.', 'erro'); return; }
+            const problemaPeriodo = builderSqlValidarPeriodo(dados);
+            if (problemaPeriodo) { repStatus('builderStatus', problemaPeriodo, 'erro'); return; }
+
+            if (btn) btn.disabled = true;
+            repStatusOcupado('builderStatus', 'Validando e salvando a consulta SQL');
+            try {
+                const validado = await repPost('sql_validar', { sql: dados.sql });
+                const definicao = Object.assign({}, validado.definicao || {}, {
+                    nome: dados.nome,
+                    descricao: dados.descricao,
+                    campo_data: dados.campo_data,
+                    data_inicio: dados.data_inicio,
+                    data_fim: dados.data_fim
+                });
+                const salvo = await repPost('salvar_consulta', {
+                    id: REP_STATE.editando,
+                    nome: dados.nome,
+                    descricao: dados.descricao,
+                    definicao: definicao
+                });
+                REP_STATE.editando = salvo.consulta.id;
+                const hint = document.getElementById('builderSqlEditingHint');
+                if (hint) { hint.textContent = 'Editando: ' + dados.nome; hint.classList.remove('hidden'); }
+                repStatusParar('builderStatus', 'Consulta SQL “' + dados.nome + '” salva com sucesso na aba Consultas.', 'sucesso');
+                await repAtualizarCatalogo(true);
+            } catch (e) {
+                repStatusParar('builderStatus', 'Não foi possível salvar a consulta SQL: ' + e.message, 'erro');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        function builderSqlNova() {
+            REP_STATE.editando = '';
+            const hintSql = document.getElementById('builderSqlEditingHint');
+            if (hintSql) hintSql.classList.add('hidden');
+            const hintVisual = document.getElementById('builderEditingHint');
+            if (hintVisual) hintVisual.classList.add('hidden');
+            document.getElementById('builderName').value = '';
+            document.getElementById('builderDescription').value = '';
+            document.getElementById('builderSqlText').value = '';
+            document.getElementById('builderResult').classList.add('hidden');
+            repStatus('builderStatus', 'Área SQL limpa. Escreva uma nova consulta.', 'info');
+        }
+
         function repIniciarBuilder() {
             if (!REP_STATE.catalogo) return;
             const selData = document.getElementById('builderDateField');
@@ -3263,6 +3617,7 @@
             }
             builderAtualizarOrdem();
             builderRenderSalvas();
+            builderSqlRenderCampos();
         }
 
         // Reconstroi o seletor "Ordenar por": sem agrupamento mostra os campos;
@@ -3304,8 +3659,11 @@
                 return;
             }
             wrap.innerHTML = salvas.map(function (c) {
+                const ehSql = !!(c.definicao && (c.definicao.tipo === 'sql' || c.definicao.sql));
                 return '<div class="rounded-xl border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">' +
-                    '<div><h4 class="font-bold text-slate-900 text-sm">' + repEsc(c.nome) + '</h4>' +
+                    '<div><div class="flex items-center gap-2 flex-wrap"><h4 class="font-bold text-slate-900 text-sm">' + repEsc(c.nome) + '</h4>' +
+                    (ehSql ? '<span class="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">SQL</span>' : '') +
+                    '</div>' +
                     '<p class="text-xs text-slate-600">' + repEsc(c.descricao || 'Sem descrição') + '</p>' +
                     '<p class="text-[11px] text-slate-400 mt-1">Atualizada em ' + repEsc(c.atualizado_em || c.criado_em || '—') + '</p></div>' +
                     '<div class="flex flex-wrap gap-2">' +
@@ -3435,6 +3793,10 @@
             builderAtualizarOrdem();
             const selOrdemNova = document.getElementById('builderOrder');
             if (selOrdemNova) selOrdemNova.value = '';
+            const sqlTextNova = document.getElementById('builderSqlText');
+            if (sqlTextNova) sqlTextNova.value = '';
+            const hintSqlNova = document.getElementById('builderSqlEditingHint');
+            if (hintSqlNova) hintSqlNova.classList.add('hidden');
             document.getElementById('builderResult').classList.add('hidden');
             repStatus('builderStatus', 'Construtor limpo. Monte uma nova consulta.', 'info');
         }
@@ -3450,6 +3812,25 @@
             if (d.campo_data) document.getElementById('builderDateField').value = d.campo_data;
             if (d.data_inicio) document.getElementById('builderDateStart').value = d.data_inicio;
             if (d.data_fim) document.getElementById('builderDateEnd').value = d.data_fim;
+
+            if (d.tipo === 'sql' || d.sql) {
+                builderModo('sql');
+                document.getElementById('builderSqlText').value = d.sql || '';
+                REP_STATE.editando = id;
+                const hintSql = document.getElementById('builderSqlEditingHint');
+                if (hintSql) { hintSql.textContent = 'Editando: ' + (c.nome || id); hintSql.classList.remove('hidden'); }
+                const hintVisual = document.getElementById('builderEditingHint');
+                if (hintVisual) hintVisual.classList.add('hidden');
+                repStatus('builderStatus', 'Consulta SQL carregada. Ajuste o texto e salve novamente.', 'info');
+                document.getElementById('rep-sub-builder').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                return;
+            }
+
+            builderModo('visual');
+            document.getElementById('builderSqlText').value = '';
+            const hintSqlLimpar = document.getElementById('builderSqlEditingHint');
+            if (hintSqlLimpar) hintSqlLimpar.classList.add('hidden');
+
             document.getElementById('builderGroup').value = d.agrupar || '';
             document.getElementById('builderDirection').value = d.direcao || 'asc';
             document.getElementById('builderLimit').value = d.limite || 500;
