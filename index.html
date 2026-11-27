@@ -1228,6 +1228,14 @@
         // Data/hora da conclusão do chamado (em ms) capturada na busca do Chatwoot.
         // Base da regra: não é possível criar CISU após 48h da finalização.
         let chatwootConclusaoMs = null;
+        // Último chamado efetivamente buscado no Chatwoot (normalizado, sem "#").
+        // Impede gerar/salvar com dados automáticos de um chamado anterior.
+        let ultimoChamadoBuscado = '';
+        // Cache do próximo Nº de CISU sequencial. É invalidado a cada nova busca.
+        let proximoCisuCache = null;
+        // Sequência das consultas de numeração: descarta respostas atrasadas de
+        // uma busca antiga que tentariam escrever no formulário do chamado novo.
+        let cisuRequestSeq = 0;
 
         // ==========================================================
         // PONTOS DE ENTREGA DAS UNIDADES — SEÇÃO 3 DA FICHA DE REGISTRO CISU
@@ -1968,6 +1976,25 @@
                         }
                     }
 
+                    // Nova busca = novo chamado. Limpa todos os campos derivados do
+                    // Chatwoot para não herdar dados do chamado anterior — em especial
+                    // o Nº da CISU, que antes permanecia no campo e ia para o PDF.
+                    document.getElementById('registro_cco').value = '';
+                    proximoCisuCache = null;
+                    cisuRequestSeq++;
+                    ['sistema_upstream', 'inicio_dt', 'fim_dt', 'fim_previsto_dt', 'especificacao', 'tipo_ocorrencia', 'percentual_reducao', 'cidade'].forEach(function (id) {
+                        const campo = document.getElementById(id);
+                        if (campo) campo.value = '';
+                    });
+                    togglePercentualField();
+                    unidadeLocalidadeAtual = null;
+                    // Chamado sem CISU de fechamento não pode continuar marcado como FINAL
+                    // (o estágio FINAL era do chamado anterior).
+                    if (!custom.cisu_fechamento && document.getElementById('estagio').value === 'FINAL') {
+                        document.getElementById('estagio').value = 'INICIAL';
+                        document.getElementById('fim_label').textContent = 'Data e Hora Previsão Fin. *';
+                    }
+
                     // Responsabilidade calculada pelo backend conforme a regra do SQL:
                     // Terceiros, Manancial, Iguá ou DESO, nessa ordem de prioridade.
                     document.getElementById('responsabilidade_operacional').value = normalizaResponsabilidade(d.responsabilidade || calculaResponsabilidade(custom));
@@ -2030,13 +2057,22 @@
     if (custom.tipo_servico) {
     document.getElementById('especificacao').value = custom.tipo_servico.toUpperCase();
 }
-    // Registro CISU conforme o tipo de registro escolhido
+    // Registro CISU conforme o tipo de registro escolhido. Se o novo chamado
+    // não tiver CISU, o campo é limpo antes de buscar o próximo sequencial —
+    // nunca reaproveita o número do chamado anterior.
     const registro = registroPorEtapa(document.getElementById('estagio').value, chatwootRegistros);
-    if (registro) document.getElementById('registro_cco').value = registro;
-    else carregarProximoNumeroCisu();
+    if (registro) {
+        document.getElementById('registro_cco').value = registro;
+    } else {
+        document.getElementById('registro_cco').value = '';
+        proximoCisuCache = null;
+        carregarProximoNumeroCisu();
+    }
     calcularDuracao();
     // Recria o bloco de Pontos de Entrega com a unidade trazida do chamado
     montarBlocoPontosFormulario({ resetar: true });
+    // Só libera gerar/salvar depois que TODOS os dados do chamado foram aplicados.
+    ultimoChamadoBuscado = String(d.chatwoot_id || chamado).replace('#', '').trim();
 }
                     }
                     
@@ -2121,6 +2157,9 @@
             document.getElementById('cisuForm').reset();
             chatwootRegistros = { abertura: '', fechamento: '' };
             chatwootConclusaoMs = null;
+            ultimoChamadoBuscado = '';
+            proximoCisuCache = null;
+            cisuRequestSeq++;
             document.getElementById('data_emissao').valueAsDate = new Date();
             document.getElementById('duracao').value = "00:00:00";
             atualizarCamposEtapa();
@@ -2602,6 +2641,9 @@
                 atualizarProtocoloRecorrencia();
                 chatwootRegistros = { abertura: '', fechamento: '' };
                 chatwootConclusaoMs = null;
+                ultimoChamadoBuscado = '';
+                proximoCisuCache = null;
+                cisuRequestSeq++;
                 registro.value = '';
                 document.getElementById('fim_previsto_dt').value = '';
                 limparFormularioRecorrencia();
@@ -3937,6 +3979,16 @@
         // (2) limite de 48h após a finalização do chamado.
         function validarCamposAutomaticos(acao) {
             if (!validarProtocoloRecorrencia(acao)) return false;
+            // Proteção contra dados "presos" de um chamado anterior: só permite
+            // salvar/gerar depois que o Nº exibido no formulário foi buscado.
+            if (!isRecorrenciaAtiva()) {
+                const chamadoAtual = String(document.getElementById('chatwoot_id').value || '').replace('#', '').trim();
+                const chamadoBuscado = String(ultimoChamadoBuscado || '').trim();
+                if (chamadoAtual !== chamadoBuscado) {
+                    alert(`⛔ Não é possível ${acao}.\nO chamado #${chamadoAtual || '(vazio)'} não foi consultado no Chatwoot. Clique em "Buscar" para carregar os dados corretos antes de continuar.`);
+                    return false;
+                }
+            }
             const faltando = [];
             // Registro da CISU é opcional; quando existir, é preenchido automaticamente.
             if (!document.getElementById('data_emissao').value) faltando.push('Data do Registro');
@@ -4174,7 +4226,6 @@
         let dashPeriodo = { inicio: '', fim: '' };
         let dashCarregado = false;
         let dashCarregando = false;
-        let proximoCisuCache = null;
         let chartRespInstance = null;
 
         function parseDuracaoHoras(texto) {
@@ -4379,6 +4430,7 @@
             const urlInput = (campoUrl && campoUrl.value.trim()) || APPSCRIPT_URL_PADRAO;
             if (!urlInput) return;
             if (proximoCisuCache) { campo.value = proximoCisuCache; return; }
+            const reqId = ++cisuRequestSeq;
             try {
                 const url = new URL(urlInput.split('?')[0]);
                 url.searchParams.set('acao', 'proximo_cisu');
@@ -4386,6 +4438,7 @@
                 const resp = await fetch(url.toString());
                 if (!resp.ok) return;
                 const dados = await resp.json();
+                if (reqId !== cisuRequestSeq) return;
                 if (!dados.encontrado) return;
                 proximoCisuCache = String(dados.numero || '').trim();
                 if (proximoCisuCache && !String(campo.value || '').trim()) campo.value = proximoCisuCache;
@@ -4661,8 +4714,7 @@
                     useCORS: true,
                     scrollX: 0,
                     scrollY: 0,
-                    backgroundColor: '#ffffff',
-                    windowWidth: element.scrollWidth
+                    backgroundColor: '#ffffff'
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
                 pagebreak: { mode: ['css', 'legacy'], avoid: ['.pdf-value', '.pdf-point', '.pdf-destinatarios div', '.pdf-section-title'] }
@@ -4714,6 +4766,22 @@
             loadAppScriptUrl();
             renderTable();
             iniciarLoginGoogle();
+
+            // Ao digitar um Nº de chamado diferente do último buscado, invalida a
+            // busca: limpa o registro automático e exige nova consulta antes de
+            // gerar/salvar, para nunca imprimir a CISU do chamado anterior.
+            document.getElementById('chatwoot_id').addEventListener('input', function () {
+                const atual = String(this.value || '').replace('#', '').trim();
+                const buscado = String(ultimoChamadoBuscado || '').trim();
+                if (atual !== buscado) {
+                    document.getElementById('registro_cco').value = '';
+                    chatwootRegistros = { abertura: '', fechamento: '' };
+                    chatwootConclusaoMs = null;
+                    proximoCisuCache = null;
+                    cisuRequestSeq++;
+                    ultimoChamadoBuscado = '';
+                }
+            });
 
             // Bloco de Pontos de Entrega da Unidade (seção 3 da ficha)
             document.getElementById('sistema_upstream').addEventListener('input', () => montarBlocoPontosFormulario({ resetar: true }));
