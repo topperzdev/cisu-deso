@@ -2761,38 +2761,39 @@
             btn.disabled = true; btn.textContent = 'Consultando Chatwoot...';
             try {
                 const url = new URL(base); url.searchParams.set('acao','diario'); url.searchParams.set('data',data);
-                const response = await fetch(url.toString());
+                const ctrlDiario = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+                const timerDiario = ctrlDiario ? setTimeout(function () { ctrlDiario.abort(); }, 120000) : null;
+                let response;
+                try {
+                    response = await fetch(url.toString(), ctrlDiario ? { signal: ctrlDiario.signal } : undefined);
+                } finally {
+                    if (timerDiario) clearTimeout(timerDiario);
+                }
                 if (!response.ok) throw new Error('Falha HTTP ' + response.status);
                 const result = await response.json();
                 if (!result.encontrado) throw new Error(result.erro || 'O Apps Script não encontrou o relatório.');
-                let textoDiario = result.texto || '';
-                // Bloco automático do grupo estratégico: paradas com mais de 3 horas.
-                let totalLongas = null;
-                try {
-                    const urlLongas = new URL(base);
-                    urlLongas.searchParams.set('acao', 'paradas_longas');
-                    urlLongas.searchParams.set('inicio', data);
-                    const respLongas = await fetch(urlLongas.toString());
-                    if (respLongas.ok) {
-                        const longas = await respLongas.json();
-                        if (longas.encontrado && longas.texto) {
-                            textoDiario += '\n\n' + longas.texto;
-                            totalLongas = Number(longas.total) || 0;
-                        }
-                    }
-                } catch (e) { /* o resumo de 3h é complementar */ }
+                // O bloco de paradas > 3h vem no mesmo JSON (sem segunda consulta).
+                // Se o backend antigo ainda não tiver o bloco, o texto segue normal.
+                const textoDiario = (result.texto || '') + (result.paradas_longas && result.paradas_longas.texto ? '\n\n' + result.paradas_longas.texto : '');
+                const totalLongas = result.paradas_longas ? (Number(result.paradas_longas.total) || 0) : null;
                 document.getElementById('dailyReportText').value = textoDiario;
                 document.getElementById('dailyReportMeta').textContent = 'Plantão: ' + data.split('-').reverse().join('/') + ' 08:00 até o dia seguinte às 08:00' + (operador ? ' • Conferência solicitada para: ' + operador : '') + ' • ' + ((result.contagem?.andamento || 0) + (result.contagem?.finalizadas || 0) + (result.contagem?.programadas || 0)) + ' ocorrências' + (totalLongas === null ? '' : ' • ' + totalLongas + ' parada(s) > 3h');
                 document.getElementById('dailyReportResult').classList.remove('hidden');
                 const avisosDiario = [];
-                if (result.truncado === true) avisosDiario.push('a busca atingiu o limite de páginas');
+                if (result.truncado === true) avisosDiario.push('a busca atingiu o limite de tempo/páginas e o relatório pode estar incompleto');
                 const ausentesDiario = Array.isArray(result.cancelados_ausentes) ? result.cancelados_ausentes : [];
                 if (ausentesDiario.length) avisosDiario.push('cancelado(s) da planilha não apareceram neste plantão: ' + ausentesDiario.join(', '));
                 mostrarStatusRelatorios(avisosDiario.length
                     ? 'Relatório gerado com avisos: ' + avisosDiario.join(' • ') + '. Confira antes de usar.'
                     : 'Relatório diário carregado, com o resumo automático das paradas acima de 3 horas anexado ao texto.',
                     avisosDiario.length ? 'erro' : 'sucesso');
-            } catch (e) { mostrarStatusRelatorios('Não foi possível gerar o relatório diário: ' + e.message, 'erro'); }
+            } catch (e) {
+                if (e && e.name === 'AbortError') {
+                    mostrarStatusRelatorios('A consulta do relatório diário demorou mais de 2 minutos e foi cancelada. Tente novamente; se persistir, verifique a conexão com o Chatwoot.', 'erro');
+                } else {
+                    mostrarStatusRelatorios('Não foi possível gerar o relatório diário: ' + e.message, 'erro');
+                }
+            }
             finally { btn.disabled = false; btn.textContent = 'Gerar relatório diário'; }
         }
 
